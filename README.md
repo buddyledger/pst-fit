@@ -89,4 +89,4 @@ The fixed package fields (author, licence, summary, description and CTAN path) a
 
 ## Licence
 
-LaTeX Project Public License (LPPL).
+LaTeX Project Public License (LPPL). The text of version 1.3c, the current version, is in [LICENSE](LICENSE).
