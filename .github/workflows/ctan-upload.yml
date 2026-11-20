@@ -1,0 +1,115 @@
+name: CTAN upload
+
+# Run by hand from the Actions tab (or: gh workflow run ctan-upload.yml).
+# "validate" is a dry run: CTAN checks the archive and fields, nothing is stored.
+# "upload" submits the package to the CTAN upload managers for review.
+#
+# Required repository secrets:
+#   CTAN_UPLOADER  name of the person uploading
+#   CTAN_EMAIL     their email address (CTAN replies to it)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "validate = dry run, upload = really submit to CTAN"
+        type: choice
+        options: [validate, upload]
+        default: validate
+      announcement:
+        description: "Announcement text for the CTAN mailing list (empty = no announcement)"
+        type: string
+        required: false
+      note:
+        description: "Private note to the CTAN upload managers"
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  PKG: pst-fit
+  CTAN_PATH: /graphics/pstricks/contrib/pst-fit
+  CTAN_API: https://www.ctan.org/submit/1.1
+
+jobs:
+  ctan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from tex/pst-fit.tex
+        id: version
+        run: |
+          v=$(sed -n 's/^\\def\\fileversion{\([^}]*\)}.*/\1/p' tex/pst-fit.tex | head -n 1)
+          if [ -z "$v" ]; then
+            echo "::error::Could not find \\fileversion in tex/pst-fit.tex"
+            exit 1
+          fi
+          echo "Package version: $v"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Build CTAN archive
+        run: |
+          mkdir -p "build/$PKG"
+          cp -r README Changes doc latex tex "build/$PKG/"
+          (cd build && zip -r "$PKG.zip" "$PKG")
+          unzip -l "build/$PKG.zip"
+
+      - name: Keep archive as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pst-fit-${{ steps.version.outputs.version }}
+          path: build/pst-fit.zip
+
+      - name: Send to CTAN (${{ inputs.mode }})
+        env:
+          MODE: ${{ inputs.mode }}
+          VERSION: ${{ steps.version.outputs.version }}
+          ANNOUNCEMENT: ${{ inputs.announcement }}
+          NOTE: ${{ inputs.note }}
+          UPLOADER: ${{ secrets.CTAN_UPLOADER }}
+          EMAIL: ${{ secrets.CTAN_EMAIL }}
+        run: |
+          if [ -z "$UPLOADER" ] || [ -z "$EMAIL" ]; then
+            echo "::error::Set the repository secrets CTAN_UPLOADER and CTAN_EMAIL first."
+            exit 1
+          fi
+
+          submit() {
+            # $1 = validate | upload. Prints CTAN's messages, fails on any error.
+            code=$(curl -sS -o response.json -w '%{http_code}' \
+              --form-string "update=true" \
+              --form-string "pkg=$PKG" \
+              --form-string "version=$VERSION" \
+              --form-string "author=Buddy Ledger; Herbert Voß" \
+              --form-string "uploader=$UPLOADER" \
+              --form-string "email=$EMAIL" \
+              --form-string "ctanPath=$CTAN_PATH" \
+              --form-string "license=lppl" \
+              --form-string "summary=Macros for curve fitting" \
+              --form-string "description=The package uses PSTricks to fit curves to: linear functions; power functions; exp function; log_10 and log_e functions; Recip; Kings Law data; Gaussian; and 4th order polynomial." \
+              --form-string "repository=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+              --form-string "announcement=$ANNOUNCEMENT" \
+              --form-string "note=$NOTE" \
+              -F "file=@build/$PKG.zip" \
+              "$CTAN_API/$1")
+            echo "CTAN $1 responded with HTTP $code"
+            jq -r '.[] | "\(.[0]): \(.[1:] | map(tostring) | join(" | "))"' response.json 2>/dev/null || cat response.json
+            echo
+            if [ "$code" != "200" ] || grep -q '"ERROR"' response.json; then
+              echo "::error::CTAN $1 failed (HTTP $code)"
+              return 1
+            fi
+          }
+
+          # Always validate first; only upload if validation is clean.
+          submit validate
+          if [ "$MODE" = "upload" ]; then
+            submit upload
+            if ! grep -q 'Upload succeeded' response.json; then
+              echo "::error::CTAN did not confirm the upload"
+              exit 1
+            fi
+          fi
