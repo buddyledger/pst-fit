@@ -17,6 +17,24 @@ Documentation is in [doc/pst-fit-doc.pdf](doc/pst-fit-doc.pdf).
 
 This file is for the GitHub repository only. The plain `README` is the one shipped to CTAN.
 
+## Building the documentation
+
+The [Build documentation](../../actions/workflows/build-doc.yml) workflow compiles `doc/pst-fit-doc.tex` with LuaLaTeX (through `latexmk`, with biber and makeindex) in a full TeX Live container. It uses the package files in this repository, not the copy of pst-fit in TeX Live.
+
+It runs on every push to `main` and every pull request that touches `doc/`, `tex/` or `latex/`, and can be started by hand:
+
+```bash
+gh workflow run build-doc.yml
+```
+
+The PDF is attached to the workflow run as the `pst-fit-doc` artifact. The workflow does not commit it: to update `doc/pst-fit-doc.pdf`, download the artifact (or build locally) and commit the file.
+
+To build locally from the `doc` folder on Linux or macOS:
+
+```bash
+TEXINPUTS="../tex:../latex:" latexmk -lualatex pst-fit-doc.tex
+```
+
 ## Releasing to CTAN
 
 The [CTAN upload](../../actions/workflows/ctan-upload.yml) workflow sends the package to CTAN on demand.
