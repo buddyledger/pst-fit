@@ -1,0 +1,58 @@
+# LaTeX build files.
+# PDFs are not ignored: doc/pst-fit-doc.pdf is tracked and ships to CTAN.
+
+# Core
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.synctex.gz(busy)
+
+# DVI / PostScript route (PSTricks)
+*.dvi
+*.ps
+*.eps.bak
+*-pics.pdf
+*-autopp.*
+*-pst.*
+*.pre
+
+# Bibliography
+*.bbl
+*.bcf
+*.blg
+*.run.xml
+*-blx.bib
+
+# Index and glossary
+*.idx
+*.ilg
+*.ind
+*.glo
+*.gls
+*.glg
+
+# hyperref, beamer, misc
+*.brf
+*.nav
+*.snm
+*.vrb
+*.lol
+*.thm
+*.xdv
+
+# Editor and OS files
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Local copy of the CTAN archive
+/build/
