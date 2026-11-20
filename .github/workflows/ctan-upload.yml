@@ -42,7 +42,7 @@ jobs:
       - name: Read version from tex/pst-fit.tex
         id: version
         run: |
-          v=$(sed -n 's/^\\def\\fileversion{\([^}]*\)}.*/\1/p' tex/pst-fit.tex | head -n 1)
+          v=$(sed -n 's/^[\\]def[\\]fileversion{\([^}]*\)}.*/\1/p' tex/pst-fit.tex | head -n 1)
           if [ -z "$v" ]; then
             echo "::error::Could not find \\fileversion in tex/pst-fit.tex"
             exit 1
