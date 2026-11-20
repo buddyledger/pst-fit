@@ -47,6 +47,9 @@
 *.thm
 *.xdv
 
+# Data files written by doc/pst-fit-doc.data when the doc is compiled
+/doc/*.dat
+
 # Editor and OS files
 *.bak
 *.swp

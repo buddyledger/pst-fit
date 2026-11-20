@@ -1,0 +1,60 @@
+name: Build documentation
+
+# Builds doc/pst-fit-doc.pdf with LuaLaTeX against the package files in this
+# repository (not the copy of pst-fit that ships with TeX Live), and keeps the
+# PDF as a downloadable artifact on the run. It does not commit the PDF.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "doc/**"
+      - "tex/**"
+      - "latex/**"
+      - ".github/workflows/build-doc.yml"
+  pull_request:
+    paths:
+      - "doc/**"
+      - "tex/**"
+      - "latex/**"
+      - ".github/workflows/build-doc.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: texlive/texlive:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build pst-fit-doc.pdf
+        working-directory: doc
+        env:
+          # Search this repository's tex/ and latex/ first; the trailing
+          # separator keeps the standard TeX Live search path after them.
+          TEXINPUTS: "../tex:../latex:"
+          # Stop TeX wrapping log lines, so the checks below can match paths.
+          max_print_line: "1000"
+        run: |
+          rm -f pst-fit-doc.pdf
+          latexmk -lualatex -interaction=nonstopmode -halt-on-error pst-fit-doc.tex
+          # Fail if TeX picked up pst-fit from TeX Live instead of this repository.
+          grep -F "(../tex/pst-fit.tex" pst-fit-doc.log
+          grep -F "(../latex/pst-fit.sty" pst-fit-doc.log
+
+      - name: Keep PDF as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pst-fit-doc
+          path: doc/pst-fit-doc.pdf
+          if-no-files-found: error
+
+      - name: Keep build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pst-fit-doc-log
+          path: doc/pst-fit-doc.log
