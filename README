@@ -9,4 +9,8 @@
 -    Gaussian; and
 -    4th order Polynomial
 
+It also prints regression statistics, draws confidence and
+prediction intervals and standardised residuals, and has a
+plot style for error bars with a calculated length.
+
 hvoss@tug.org

@@ -907,8 +907,9 @@ n 0 eq not
   /ShowSup { % string as superscript
     0 \psk@fontscale\space 2 div rmoveto mfontexp show mfont
     0 \psk@fontscale\space 2 div neg rmoveto } def
+  /mfontsub { \psk@PSfont\space findfont \psk@fontscale\space 0.65 mul scalefont setfont } bind def
   /ShowSub { % string as subscript
-    0 \psk@fontscale\space 5 div neg rmoveto mfontexp show mfont
+    0 \psk@fontscale\space 5 div neg rmoveto mfontsub show mfont
     0 \psk@fontscale\space 5 div rmoveto } def
   /ShowBar { % string with a bar on top, for the mean values
     CP /ftBy ED /ftBx ED show CP pop /ftBxx ED

@@ -5,6 +5,24 @@ pst-fit.sty ----------- (hv)
 
 
 pst-fit.tex ----------- (bl/hv)
+0.04  2026-11-20  - new option plottype: confidence interval of the fit
+                    (upperci, lowerci, bothci), prediction interval
+                    (upperpi, lowerpi, bothpi) and standardised residuals
+                  - new option printconfig: print the regression statistics
+                    (t value, degrees of freedom, Sxx, Syy, Sxy, Syx, mean
+                    values, half width of the confidence interval)
+                  - new option tvp: Student t value for the intervals
+                  - new option plotcoord: plot and statistics in the
+                    transformed coordinates (trans) or with the statistics
+                    of the untransformed data (special)
+                  - new plot style ErrorFunction with the options xerrfunc
+                    and yerrfunc: error bars with a calculated length
+                  - R^2 is now calculated from the transformed data for all
+                    fit functions; it was wrong for PowerFit, ExpFit,
+                    GaussFit, CustomFit and for fits with a given Yint
+                  - Yint is now respected by LogTFit, LogEFit and RecipFit
+                  - terms with a coefficient of zero are no longer printed
+                  - plotNoTwo works with plotNoMax=1
 0.03  2024-03-17  - added option comma for decimals instead of dot 
 0.02  2017-08-24  - use always URW fonts instead of PostScript, 
                     eg Helvetica->NimbusSanL
