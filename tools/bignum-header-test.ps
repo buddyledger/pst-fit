@@ -1,0 +1,30 @@
+%!PS
+% Checks that dvips/pst-fit-bignum.pro loads and that the procedures which
+% pst-fit calls give the expected results.
+% usage (from the repository root):
+%   gs -q -dNODISPLAY -dBATCH -dNOSAFER dvips/pst-fit-bignum.pro tools/bignum-header-test.ps
+/fails 0 def
+/B { tx@bnDict exch get tx@bnDict begin exec end } def
+/check { % (name) string expected
+  2 copy eq { pop pop pop }{
+    /fails fails 1 add def
+    3 -1 roll print ( FAILED: got ) print exch print ( expected ) print = } ifelse } def
+/tx@bnDict where { pop false }{ true } ifelse { (tx@bnDict is not defined) = /fails 1 def }{
+  20 /setbnsize B
+  (div)    1 /setbn B 3 /setbn B /divbn B /bncvs B (+3.3333333333333333333e-1) check
+  (mul)    (1.5) /setbn B (-2.5) /setbn B /mulbn B /bncvs B (-3.7500000000000000000e0) check
+  (add)    (1e10) /setbn B 1 /setbn B /addbn B /bncvs B (+1.0000000001000000000e10) check
+  (sub)    1 /setbn B (1e-15) /setbn B /subbn B /bncvs B (+9.9999999999999900000e-1) check
+  (neg)    2 /setbn B /negbn B /bncvs B (-2.0000000000000000000e0) check
+  (abs)    -2 /setbn B /absbn B /bncvs B (+2.0000000000000000000e0) check
+  (gt)     3 /setbn B 2 /setbn B /gtbn B { (true) }{ (false) } ifelse (true) check
+  (zero)   0 /setbn B /bniszero B { (true) }{ (false) } ifelse (true) check
+  (cvr)    (0.125) /setbn B /bncvr B 0.125 eq { (true) }{ (false) } ifelse (true) check
+  % the result of mulbn is a new array [sign digits exponent], pst-fit changes
+  % its exponent to divide by a power of ten
+  (format) 5 /setbn B 5 /setbn B /mulbn B dup 2 2 copy get 1 sub put /bncvs B
+           (+2.5000000000000000000e0) check
+} ifelse
+fails 0 eq { (bignum header: all checks passed) = }{ (bignum header: CHECKS FAILED) = } ifelse
+flush
+fails 0 eq { quit }{ 1 .quit } ifelse

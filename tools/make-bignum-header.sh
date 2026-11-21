@@ -21,9 +21,6 @@ mkdir -p "$(dirname "$out")"
   printf '%% Source: bignumlibrary.ps, https://github.com/buddyledger/postscript-math\n'
   printf '%% Source commit: %s\n' "$rev"
   printf '%%\n'
-  printf '%% Copyright Buddy Ledger\n'
-  printf '%% This file may be distributed and/or modified under the conditions of\n'
-  printf '%% the LaTeX Project Public License, version 1.3c or later.\n'
   printf '%%\n'
   printf '/tx@bnDict 200 dict def\n'
   printf 'tx@bnDict begin\n'
