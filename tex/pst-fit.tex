@@ -860,6 +860,22 @@ n 0 eq not
     n 2 mul 1 roll
   } repeat
   ftBig { n 2 mul copy n 2 mul array astore /ftPts ED } if
+  %Centre and scale the x values: u = (x - ftXc)/ftXs lies in [-1,1]. The
+  %least squares system is solved for a polynomial in u. With the x values
+  %themselves the sums of their powers need more digits than a real has, as
+  %soon as x is far from zero or the order is high, and the fit is wrong.
+  %For a given Yint the model has no constant term, then x is only scaled.
+  /ftXc 0 def /ftXs 1 def
+  ftBig not n 0 gt and {
+    ReduceOrder not {
+      n { 1 index ftXc add /ftXc ED n 2 mul 2 roll } repeat
+      /ftXc ftXc n div def } if
+    /ftXs 0 def
+    n { 1 index ftXc sub abs dup ftXs gt { /ftXs ED }{ pop } ifelse n 2 mul 2 roll } repeat
+    ftXs 0 eq { /ftXs 1 def } if
+  } if
+  n 2 mul copy n 2 mul array astore /ftXY ED
+  n { exch ftXc sub ftXs div exch n 2 mul 2 roll } repeat
   %START ASSEMBLY OF LEAST SQUARES MATRIX
   1 1 order 1 add { /ci exch def
     1 1 ci { /cj exch def
@@ -937,6 +953,22 @@ n 0 eq not
   %%%%%%%%%%%%%%%%%%%%%%%%%%
   %% END SOLVE CURVE FITS %%
   %%%%%%%%%%%%%%%%%%%%%%%%%%
+  %The points again with their x values
+  n 2 mul { pop } repeat ftXY aload pop
+  %ftBu: coefficients of the polynomial in u, used for the fitted values.
+  %ai: coefficients of the polynomial in x, for the equation,
+  %a_j = sum_k b_k C(k,j) (-ftXc)^(k-j) / ftXs^k
+  /ftPow { 1 exch { 1 index mul } repeat exch pop } def % x k -> x^k
+  /ftBu ai def
+  /ai ftBu length array def
+  0 1 ai length 1 sub { /ftj ED
+    0
+    ftj 1 ai length 1 sub { /ftk ED
+      1 1 1 ftj { /fti ED ftk ftj sub fti add mul fti div } for
+      ftBu ftk get mul ftXc neg ftk ftj sub ftPow mul ftXs ftk ftPow div add
+    } for
+    ai ftj 3 -1 roll put
+  } for
   %%%%%%%%%%%%%%%%
   %% STATISTICS %%
   %%%%%%%%%%%%%%%%
@@ -947,9 +979,10 @@ n 0 eq not
   /ftOff ReduceOrder { 1 } { 0 } ifelse def
   /ftPow { 1 exch { 1 index mul } repeat exch pop } def % x k -> x^k
   /ftPoly { % Xt -> a0 + a1 Xt + ...
-    /ftX ED 0 1 1 m { /fti ED ai fti 1 sub get ftX fti 1 sub ftPow mul add } for } def
-  /ftLev { % Xt -> leverage h = x' A^-1 x
-    /ftX ED 0
+    ftXc sub ftXs div /ftX ED
+    0 1 1 m { /fti ED ftBu fti 1 sub get ftX fti 1 sub ftPow mul add } for } def
+  /ftLev { % Xt -> leverage h = u' A^-1 u
+    ftXc sub ftXs div /ftX ED 0
     0 1 ftNp 1 sub { /fti ED
       0 1 ftNp 1 sub { /ftj ED
         ftAinv fti ftNp mul ftj add get
