@@ -6,6 +6,8 @@
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 export TEXINPUTS="$root/tex:$root/latex:"
+export TEXPSHEADERS="$root/dvips:"
+export DVIPSHEADERS="$root/dvips:"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 cd "$work"
