@@ -51,6 +51,9 @@ jobs:
           grep -F "(../tex/pst-fit.tex" pst-fit-doc.log
           grep -F "(../latex/pst-fit.sty" pst-fit-doc.log
 
+      - name: Test the accuracy of the fit with dvips and Ghostscript
+        run: bash tools/precision-test.sh
+
       - name: Test the bignum option with dvips and Ghostscript
         run: bash tools/bignum-test.sh
 

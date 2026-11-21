@@ -21,7 +21,7 @@
 \readdata[ignoreLines=0]{\Loge}{loge.dat}
 \readdata[ignoreLines=0]{\Calib}{calib.dat}
 \readdata[ignoreLines=0]{\PScatter}{pscatter.dat}
-\readdata[ignoreLines=0]{\Kelvin}{kelvin.dat}
+\readdata[ignoreLines=0]{\HighOrder}{highorder.dat}
 
 
 \renewcommand\bgImage{%
@@ -331,46 +331,87 @@ the error in $y$ is 5\,\% of the value plus $0.3$.
 \end{psgraph}
 \end{LTXexample}
 
-\section{Arbitrary precision arithmetic}
+\section{Numerical accuracy}
 The fit is calculated by the PostScript interpreter. With \texttt{latex},
 \texttt{dvips} and Ghostscript the numbers have single precision, about 7
-digits. This is not enough for the sums of the least squares method, if the
-$x$ values are far from zero or if the order of the polynomial is high. The
-result is then a wrong curve, without any warning. With the optional argument
-\Lkeyword{bignum} the sums, the solution of the equations, the fitted values and
-the values for the intervals are calculated with decimal numbers of the given
-number of digits; \texttt{bignum} without a value means 20 digits and
-\texttt{bignum=0}, the default, switches it off.
+digits; with Lua\LaTeX{} they have double precision, about 15 digits. The sums
+of the least squares method need many more digits than the data has, if the
+$x$ values are far from zero or if the order of the polynomial is high.
+Up to version 0.04 the result with Ghostscript could then be a wrong curve,
+without any warning.
 
-The table shows the fit of a polynomial of second order to the data of the
-example below, which has $x$ values from 293 to 302, compiled with
-\texttt{latex}, \texttt{dvips} and Ghostscript 10.08:
+Since version 0.05 the $x$ values are centred and scaled for the calculation,
+$u=(x-\bar x)/s$ lies between $-1$ and $1$, and the fit is a polynomial in $u$.
+The curve, the statistics and the intervals are calculated from this
+polynomial. Only for the printed equation it is converted into a polynomial
+in $x$. For a fit with a given \Lkeyword{Yint} the $x$ values are only scaled.
+The table shows the fit of a polynomial of second order to ten points with
+$x$ values from 293 to 302, with \texttt{latex}, \texttt{dvips} and Ghostscript 10.08:
 
 \medskip
 \begin{tabular}{@{}lll@{}}\hline
  & equation & $R^2$\\\hline
-without \texttt{bignum} & $y=-530.786-5.02072x+0.02322x^2$ & 0.951966\\
-with \texttt{bignum=20} & $y=68448.6-468.787x+0.802651x^2$ & 0.999716\\
+version 0.04 & $y=-530.786-5.02072x+0.02322x^2$ & 0.951966\\
+version 0.05 & $y=68448.6-468.787x+0.802651x^2$ & 0.999716\\
 exact & $y=68448.6-468.787x+0.802652x^2$ & 0.999716\\\hline
 \end{tabular}
 
 \medskip
-The data itself still has only the precision of the interpreter, therefore the
-last digits of a coefficient can differ, as in the table. The calculation
-takes longer, some tenths of a second for a figure like the following one.
+This is always done and needs no option. It is enough for the usual fits. With
+single precision it is not enough for a polynomial of a high order, which
+is the case for the optional argument \Lkeyword{bignum} of the next section.
+
+\section{Arbitrary precision arithmetic}
+With the optional argument \Lkeyword{bignum} the sums, the solution of the
+equations, the fitted values and the values for the intervals are calculated
+with decimal numbers of the given number of digits. \texttt{bignum} without a
+value means 20 digits; \texttt{bignum=0}, the default, switches it off.
+
+\medskip
+\noindent\fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{%
+\textbf{With Lua\LaTeX{} the option is ignored.} There the numbers have double
+precision already, the fit below is correct without the option, and the
+decimal numbers would be about 20 times slower. The option is meant for
+\texttt{latex}, \texttt{dvips} and Ghostscript, where the numbers have single
+precision. A document can use it and be compiled both ways.}}
+
+\medskip
+The show case is a polynomial of order 10 through 15 points, the values of
+$y=0.8x^2/3+3\sin x+5$ for $x=1,2,\ldots,15$, rounded to one decimal. The table
+shows the first coefficients of the printed equation and the standard error
+of the fit, with \texttt{latex}, \texttt{dvips} and Ghostscript 10.08:
+
+\medskip
+\begin{tabular}{@{}lrrr@{}}\hline
+ & without \texttt{bignum} & \texttt{bignum=20} & exact\\\hline
+$a_0$ & $-3.96582$ & $-0.721988$ & $-0.721905$\\
+$a_1$ & $27.269$ & $18.9622$ & $18.9620$\\
+$a_2$ & $-26.0178$ & $-17.7077$ & $-17.7075$\\
+$a_3$ & $14.899$ & $10.5195$ & $10.5194$\\
+$a_4$ & $-5.50002$ & $-4.12873$ & $-4.12869$\\
+$a_5$ & $1.28763$ & $1.0171$ & $1.01709$\\
+$a_6$ & $-0.188355$ & $-0.153882$ & $-0.153881$\\
+$a_7$ & $0.017063$ & $0.014233$ & $0.014233$\\
+$a_8$ & $-0.000929$ & $-0.000784$ & $-0.000784$\\
+$S_{yx}$ & $0.036202$ & $0.024586$ & $0.024585$\\\hline
+\end{tabular}
+
+\medskip
+Without \texttt{bignum} the curve still runs close to the points, but it is
+not the least squares fit: the coefficients are wrong from the first digit
+and the standard error is 47\,\% too large, and with it the confidence and
+prediction intervals. With \texttt{bignum=20} the coefficients are correct to
+four or five digits; the rest is the precision with which the data itself
+reaches the interpreter. The calculation takes longer, about one second for
+this figure with Ghostscript.
 
 \begin{LTXexample}[pos=t]
-\begin{psgraph}[arrows=->,Dy=20,Dx=2,Ox=292](292,0)(292,0)(303,90){4.5in}{3.5in}
-\psset{plotstyle=GLLSR,PolyOrder=2,bignum=20,ShowEq=false}
-\listplot[ShowEq,decimals=3,EqPos=292.5 85]{\Kelvin}
-\listplot[plottype=bothci,linestyle=dashed,linecolor=blue]{\Kelvin}
-\listplot[plotstyle=dots]{\Kelvin}
+\begin{psgraph}[arrows=->,Dy=20,Dx=2](0,0)(0,0)(16,80){4.5in}{3in}
+\psset{plotstyle=GLLSR,PolyOrder=10,bignum=20}
+\listplot[decimals=6,EqPos=1 75,printconfig=0 1 0 0 0 0 0 1]{\HighOrder}
+\listplot[plotstyle=dots]{\HighOrder}
 \end{psgraph}
 \end{LTXexample}
-
-With Lua\LaTeX{} the numbers have double precision, about 15 digits, which is
-enough for nearly all data. There the decimal numbers would be very slow and
-the option is ignored. This document is compiled with Lua\LaTeX.
 
 The decimal numbers are provided by the header file \texttt{pst-fit-bignum.pro},
 which is loaded by the package. It is the PostScript library

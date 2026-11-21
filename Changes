@@ -5,11 +5,15 @@ pst-fit.sty ----------- (hv)
 
 
 pst-fit.tex ----------- (bl/hv)
-0.05  2026-11-21  - new option bignum: the fit, the statistics and the
+0.05  2026-11-21  - the x values are centred and scaled for the calculation
+                    of the fit. With the single precision numbers of
+                    Ghostscript the fit was wrong for x values far from
+                    zero and inaccurate for polynomials of a higher order.
+                  - new option bignum: the fit, the statistics and the
                     intervals are calculated with decimal numbers of the
-                    given number of digits. With the single precision reals
-                    of Ghostscript the fit was wrong for x values far from
-                    zero and for polynomials of a higher order.
+                    given number of digits, for polynomials of a high order
+                    with Ghostscript. It is ignored with LuaLaTeX, which
+                    has double precision numbers.
                   - new header file pst-fit-bignum.pro, the PostScript
                     library bignumlibrary.ps for decimal numbers of
                     arbitrary precision

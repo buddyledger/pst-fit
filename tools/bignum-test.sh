@@ -18,10 +18,12 @@ echo "== fit with the option bignum (latex, dvips, Ghostscript)"
 latex -interaction=nonstopmode -halt-on-error "$root/tools/bignum-test.tex" > latex.log 2>&1 || { tail -30 latex.log; exit 1; }
 dvips -q bignum-test.dvi -o bignum-test.ps
 gs -q -dNOPAUSE -dBATCH -dNOSAFER -sDEVICE=txtwrite -sOutputFile=bignum-test.txt bignum-test.ps
-grep -E "R2|y *=" bignum-test.txt || true
-if grep -q "0\.999716" bignum-test.txt; then
-  echo "bignum fit: R2 is correct"
+grep "=" bignum-test.txt | sed 's/  */ /g' || true
+# The text device writes the subscripts on other lines, Syx appears as "S = ".
+# The last one is that of page 2, with bignum.
+if grep -E "S *= *[0-9]" bignum-test.txt | tail -n 1 | grep -q "0\.02458"; then
+  echo "bignum fit: Syx is correct"
 else
-  echo "bignum fit: R2 = 0.999716 not found, the fit is wrong"
+  echo "bignum fit: Syx = 0.02458 not found on page 2, the fit is wrong"
   exit 1
 fi

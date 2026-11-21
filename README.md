@@ -20,7 +20,7 @@ Beyond the fit itself, the `GLLSR` plot style can (since version 0.04):
 
 The new plot style `ErrorFunction` draws error bars whose length is calculated from the value (`xerrfunc`, `yerrfunc`).
 
-Since version 0.05 the option `bignum` (for example `bignum=20`) calculates the fit with decimal numbers of that many digits. With `latex` → `dvips` → Ghostscript numbers have only about 7 digits, and without the option the fit can be wrong when the x values are far from zero or the polynomial order is high. LuaLaTeX has enough precision and ignores the option.
+Since version 0.05 the x values are centred and scaled for the calculation, which keeps the fit accurate with the single precision numbers of Ghostscript (`latex` → `dvips` → `ps2pdf`). For polynomials of a high order there is in addition the option `bignum` (for example `bignum=20`), which calculates the fit with decimal numbers of that many digits. **LuaLaTeX ignores `bignum`**: it has double precision numbers and does not need it.
 
 A short example:
 
@@ -49,6 +49,8 @@ It runs on every push to `main` and every pull request that touches `doc/`, `tex
 ```bash
 gh workflow run build-doc.yml
 ```
+
+The workflow also runs `tools/precision-test.sh` and `tools/bignum-test.sh`, which compile fits with `latex` → `dvips` → Ghostscript and check the results.
 
 The PDF is attached to the workflow run as the `pst-fit-doc` artifact. The workflow does not commit it: to update `doc/pst-fit-doc.pdf`, download the artifact (or build locally) and commit the file.
 
