@@ -166,7 +166,11 @@ Herbert Voß}
 \end{LTXexample}
 
 \section{Regression statistics}
-The least squares fit is linear in its coefficients. For the special fit
+The least squares fit is linear in its coefficients; the method is described
+in \cite{chapra98}. The statistical properties of the result, on which this
+and the next two sections are based, are treated in \cite{dunn10},
+\cite{devore99} and \cite{draper98}, in order of increasing rigour.
+For the special fit
 functions the data is first transformed, e.\,g.\ with the logarithm, and the
 statistics below are those of the transformed data, where the fit is a straight
 line or a polynomial (see \Lkeyword{plotcoord} for the alternatives).
@@ -226,9 +230,11 @@ interval is the range in which a single new measurement is expected, it is wider
 \hat y(x) \pm t_{v,P}\,S_{yx}\sqrt{1+h(x)}
 \]
 For a straight line the leverage is $h(x)=1/n+(x-\bar x)^2/S_{xx}$; for a
-polynomial it is calculated from the inverse of the least squares matrix.
+polynomial it is calculated from the inverse of the least squares matrix
+\cite{draper98}.
 $t_{v,P}$ is the two sided 95\,\% value of the Student $t$ distribution for
-$S_{\mathrm{dof}}$ degrees of freedom, which is taken from a table. Another
+$S_{\mathrm{dof}}$ degrees of freedom, which is taken from a table
+(see e.\,g.\ \cite{devore99}). Another
 value can be set with the optional argument \Lkeyword{tvp}, e.\,g.\ \texttt{tvp=3.355}
 for 99\,\% and 8 degrees of freedom. For the intervals use \texttt{ShowEq=false},
 otherwise the equation is printed again.
@@ -260,7 +266,7 @@ a fit of a power function:
 \section{Standardised residuals}
 With \texttt{plottype=residuals} a cross is drawn for every data point at its
 $x$ value and at the height of its standardised residual
-$e_i^*=(y_i-\hat y_i)/\bigl(S_{yx}\sqrt{1-h(x_i)}\bigr)$.
+$e_i^*=(y_i-\hat y_i)/\bigl(S_{yx}\sqrt{1-h(x_i)}\bigr)$ \cite{draper98}.
 Without a systematic deviation of the data from the fit function the
 residuals scatter randomly around zero and nearly all of them are between $-2$ and $2$.
 
