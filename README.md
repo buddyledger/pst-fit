@@ -11,6 +11,27 @@ PSTricks macros for curve fitting. The package fits curves to:
 - Gaussian
 - 4th order polynomial
 
+Beyond the fit itself, the `GLLSR` plot style can (since version 0.04):
+
+- print regression statistics next to the equation (`printconfig`): R², Student t value, degrees of freedom, S<sub>xx</sub>, S<sub>yy</sub>, S<sub>xy</sub>, standard error S<sub>yx</sub>, mean values and the half width of the confidence interval
+- draw the confidence interval of the fit and the prediction interval (`plottype=bothci`, `plottype=bothpi`, with `tvp` to set the Student t value)
+- draw the standardised residuals (`plottype=residuals`)
+- plot the fit in the transformed coordinates, where it is a straight line (`plotcoord=trans`)
+
+The new plot style `ErrorFunction` draws error bars whose length is calculated from the value (`xerrfunc`, `yerrfunc`).
+
+A short example:
+
+```latex
+\begin{psgraph}[arrows=->,Dy=2](0,0)(0,0)(10,22){4.5in}{4.5in}
+  \psset{plotstyle=GLLSR,ShowEq=false}
+  \listplot[ShowEq,decimals=2,EqPos=1 20]{\Data}             % fit, equation and R²
+  \listplot[plottype=bothci,linestyle=dashed]{\Data}         % 95 % confidence interval
+  \listplot[plottype=bothpi,linestyle=dotted]{\Data}         % 95 % prediction interval
+  \listplot[plotstyle=dots]{\Data}
+\end{psgraph}
+```
+
 The package is published on CTAN at
 [graphics/pstricks/contrib/pst-fit](https://ctan.org/tex-archive/graphics/pstricks/contrib/pst-fit).
 Documentation is in [doc/pst-fit-doc.pdf](doc/pst-fit-doc.pdf).

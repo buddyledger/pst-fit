@@ -23,8 +23,8 @@
 \ifx\PSTricksAddLoaded\endinput\else\input pstricks-add.tex\fi
 \ifx\PSTXKeyLoaded\endinput\else    \input pst-xkey \fi
 %
-\def\fileversion{0.03}
-\def\filedate{2024/03/17}
+\def\fileversion{0.04}
+\def\filedate{2026/11/20}
 \message{`PST-fit' v\fileversion, \filedate\space (BL,HV)}
 %
 \edef\PstAtCode{\the\catcode`\@} \catcode`\@=11\relax
@@ -61,6 +61,44 @@
     copypt exch dup \psk@relxerr\space mul sub exch ArrowB L pop pop }
     { pop pop } ifelse } repeat
     } if
+}>
+
+%
+% Error bars whose length is given by a function of the coordinate (v0.04).
+% xerrfunc/yerrfunc are PostScript code which takes the x (y) value of a
+% point and leaves the absolute error in x (y), both in plot units.
+\define@key[psset]{pst-fit}{xerrfunc}[{}]{\def\psk@xerrfunc{#1}}
+\define@key[psset]{pst-fit}{yerrfunc}[{}]{\def\psk@yerrfunc{#1}}
+\psset[pst-fit]{xerrfunc=,yerrfunc=}
+\def\beginplot@ErrorFunction{\begin@OpenObj}
+\def\endplot@ErrorFunction{\psErrorFunction@ii}
+\def\psErrorFunction@ii{%
+  \addto@pscode{
+    \pst@cp     % current point
+    \psline@iii % arc and lineto type
+    \tx@ErrorFunction
+  }%
+  \end@OpenObj%
+}
+%
+\def\tx@ErrorFunction{ErrorFunction }
+\pst@def{ErrorFunction}<{%
+  /xerrfunc { \psk@xerrfunc\space } def
+  /yerrfunc { \psk@yerrfunc\space } def
+  /xerrpt { \pst@number\psxunit\space div xerrfunc \pst@number\psxunit\space mul } def
+  /yerrpt { \pst@number\psyunit\space div yerrfunc \pst@number\psyunit\space mul } def
+  NArray n 0 eq not {%
+    n { (\psk@yerrfunc) length 0 gt {%
+      2 copy dup yerrpt add ArrowA
+      2 copy dup yerrpt sub Lineto
+      2 copy dup yerrpt sub ArrowB L } if
+      (\psk@xerrfunc) length 0 gt {%
+      2 copy exch dup xerrpt add exch ArrowA
+      2 copy exch dup xerrpt sub exch Lineto
+      2 copy exch dup xerrpt sub exch ArrowB L pop pop }{%
+      pop pop } ifelse
+    } repeat
+  } if
 }>
 
 \define@boolkey[psset]{pst-fit}[Pst@]{ScyBase}[true]{}%
@@ -143,7 +181,7 @@ n 0 eq not
     } repeat
   \fi
   /n m \psk@plotNoMax\space 1 add div cvi def
-  \psk@plotNoMax\space 1 gt {% multiple data files?
+  \psk@plotNoMax\space 1 gt \psk@plotNoTwo\space 0 gt or {% multiple data files?
     n {
       \psk@plotNoTwo\space 0 gt {
         \psk@plotNoMax\space copy
@@ -434,6 +472,35 @@ n 0 eq not
       ExpFit=false,GaussFit=false,RecipFit=false,CustomFit=false,%
         FXtrans=,FYtrans=,RYtrans=,Yint=,CheckZeroX=,CheckZeroY=}
 
+%
+% New in v0.04: regression statistics, confidence/prediction intervals,
+% residuals and plotting in the transformed (linearised) coordinates.
+%
+% plottype: what plotstyle=GLLSR draws
+%   fit                      the fitted curve (default)
+%   residuals                the standardised residuals of the data points
+%   upperci,lowerci,bothci   confidence interval of the fit (mean response)
+%   upperpi,lowerpi,bothpi   prediction interval for a single new observation
+\define@choicekey*[psset]{pst-fit}{plottype}[\val\nr]%
+  {fit,residuals,upperci,lowerci,bothci,upperpi,lowerpi,bothpi}[fit]{\edef\psk@plottype{\nr}}
+% plotcoord: the coordinates which are used for the plot and the statistics
+%   normal   plot in the coordinates of the data; statistics are those of the
+%            linear least squares problem, i.e. in the transformed coordinates
+%   trans    plot (and print) the fit in the transformed coordinates, where
+%            it is a straight line or a polynomial
+%   special  plot in the coordinates of the data and take the statistics from
+%            the untransformed residuals (additive error in y)
+\define@choicekey*[psset]{pst-fit}{plotcoord}[\val\nr]%
+  {normal,trans,special}[normal]{\edef\psk@plotcoord{\nr}}
+% tvp: Student t value for the intervals. Empty (default): two sided 95%
+%   value for the degrees of freedom of the fit, taken from a table.
+\define@key[psset]{pst-fit}{tvp}[{}]{\def\psk@tvp{#1}}
+% printconfig: up to 11 flags (0 or 1) which select the printed lines:
+%   equation, R^2, t value, degrees of freedom, Sxx, Syy, Sxy, Syx,
+%   mean of x, mean of y, half width of the confidence interval
+\define@key[psset]{pst-fit}{printconfig}[{}]{\def\psk@printconfig{#1}}
+\psset[pst-fit]{plottype=fit,plotcoord=normal,tvp=,printconfig=1 1 0 0 0 0 0 0 0 0 0}
+
 \def\beginplot@GLLSR{\begin@SpecialObj}
 \def\endplot@GLLSR{%
   \psGLLSR@ii\psk@fillstyle\ifpsshadow\pst@closedshadow\fi%
@@ -460,22 +527,29 @@ n 0 eq not
   /FYtrans { Yint sub } def
   /RYtrans {1 mul} def
   /xPr {(x) show} def
+  /sfont { \psk@symbolFont\space findfont \psk@fontscale\space scalefont setfont } bind def
+  /praQuiet false def
+  /plottype \psk@plottype\space def
+  /plotcoord \psk@plotcoord\space def
+  /printconfig [1 1 0 0 0 0 0 0 0 0 0] def
+  [\psk@printconfig] dup length 11 gt { 0 11 getinterval } if
+  printconfig exch 0 exch putinterval
   %Special Fit Functions (Linear Transforms)
   \psk@PowerFit\space { /order 1 def /CheckZeroX true def /CheckZeroY true def /PolyEq false def
        /FXtrans {log} def /FYtrans {Yint sub log} def /RYtrans {10 exch exp Yint add} def /ReduceOrder false def } if
   \psk@LogTFit\space { /order 1 def /CheckZeroX true def /PolyEq true def
        /xPr { (log) show (\string\050) show (x) show (\string\051) show } def
-       /FXtrans {log} def /FYtrans {1 mul} def /RYtrans {1 mul} def } if %
+       /FXtrans {log} def /FYtrans {Yint sub} def /RYtrans {1 mul} def } if %
   \psk@LogEFit\space { /order 1 def /CheckZeroX true def /PolyEq true def
         /xPr { (ln) show (\string\050) show (x) show (\string\051) show } def
-       /FXtrans {ln} def /FYtrans {1 mul} def /RYtrans {1 mul} def } if %
+       /FXtrans {ln} def /FYtrans {Yint sub} def /RYtrans {1 mul} def } if %
   \psk@ExpFit\space { /order 1 def /CheckZeroY true def /PolyEq false def
        /FXtrans {1 mul} def /FYtrans {Yint sub ln} def /RYtrans {Euler exch exp Yint add} def  /ReduceOrder false def } if %
   \psk@GaussFit\space { /order 2 def /CheckZeroY true def /PolyEq false def
        /FXtrans {1 mul} def /FYtrans {Yint sub ln} def /RYtrans {Euler exch exp Yint add} def  /ReduceOrder false def } if %
   \psk@RecipFit\space { /order 1 def /CheckZeroX true def /PolyEq true def
         /xPr { (\string\050) show (1) show (\string\244) show (x) show (\string\051) show } def
-       /FXtrans { 1 exch div } def /FYtrans {1 mul} def /RYtrans {1 mul} def } if
+       /FXtrans { 1 exch div } def /FYtrans {Yint sub} def /RYtrans {1 mul} def } if
   \psk@CustomFit\space { /PolyFit false def
        (\psk@FXtrans) length 0 gt { {\psk@FXtrans\space} /FXtrans ED } if 
        (\psk@FYtrans) length 0 gt { {\psk@FYtrans\space} /FYtrans ED } if
@@ -483,6 +557,8 @@ n 0 eq not
        (\psk@CheckZeroX) length 0 gt { {\psk@CheckZeroX\space} /CheckZeroX ED } if
        (\psk@CheckZeroY) length 0 gt { {\psk@CheckZeroY\space} /CheckZeroY ED } if
        (\psk@ReduceOrder) length 0 gt { {\psk@ReduceOrder\space} /ReduceOrder ED } if } if %
+  %In the transformed coordinates every fit is a polynomial
+  plotcoord 1 eq { /PolyEq true def } if
   %Initialize Arrays
   /A order 1 add order 1 add mul array def
   /B order 1 add array def
@@ -570,6 +646,26 @@ n 0 eq not
          \psk@PSfont\space findfont \psk@fontscale\space scalefont setfont } ifelse
          }{ \psk@PSfont\space findfont \psk@fontscale\space scalefont setfont
          0 0 moveto (PRA Error Not Enough Parameters) show } ifelse } def
+  /ftSolve { \tx@GaussSolve } def
+  %Inverse of the least squares matrix A, it gives the leverage of a point,
+  %which is needed for the intervals and the standardised residuals.
+  %Solves A x = e_k for every unit vector e_k, A and B are left untouched.
+  /ftCalcInv {
+    /ftNp order 1 add def
+    /ftsvA A def /ftsvB B def /ftsvai ai def
+    /ftAinv ftNp ftNp mul array def
+    /praQuiet true def
+    0 1 ftNp 1 sub { /ftk ED
+      /A ftsvA length array def ftsvA A copy pop
+      /B ftNp array def 0 1 ftNp 1 sub { B exch 0 put } for
+      B ftk 1 put
+      /ai ftNp array def 0 1 ftNp 1 sub { ai exch 0 put } for
+      ftSolve
+      0 1 ftNp 1 sub { /ftj ED ftAinv ftj ftNp mul ftk add ai ftj get put } for
+    } for
+    /praQuiet false def
+    /A ftsvA def /B ftsvB def /ai ftsvai def
+  } def
   0 1 A length 1 sub { A exch 0 put } for
   0 1 B length 1 sub { B exch 0 put } for
   0 1 ai length 1 sub { ai exch 0 put } for
@@ -581,6 +677,8 @@ n 0 eq not
     CheckZeroX { exch dup \pst@number\psxunit\space div 0 le { /tmpx true def } if exch } if
     tmpx tmpy or { pop pop /n n 1 sub def }{ n 2 mul 2 roll } ifelse
     } repeat } if
+  %Keep the untransformed points (in pt), needed for the residual plot
+  n 2 mul copy n 2 mul array astore /ftRaw ED
   %%%
   %%%%
   %Determine Max/Min X for Plotting
@@ -666,7 +764,7 @@ n 0 eq not
   \Pst@Debug\space 1 eq {
   A [ order 1 add order 1 add praXr praYt \psk@MaScale\space true false ] PRA
   B [ order 1 add 1 praXr praYt \psk@MaScale\space false true ] PRA } if
-  \tx@GaussSolve
+  ftCalcInv ftSolve
   /order order 1 add def                                             %restore system order
   /m m 1 add def
   % \Pst@Debug\space 1 eq {
@@ -677,168 +775,251 @@ n 0 eq not
   /ai dummyai def
   ai 0 Yint put
   %ai [ order 2 sub 1 0 0 \psk@MaScale\space true false ] PRA
-  }{ \tx@GaussSolve } ifelse
+  }{ ftCalcInv ftSolve } ifelse
   %\Pst@Debug\space 1 eq {
   %ai [ order 1 add 1 praXr praYt \psk@MaScale\space false false ] PRA } if
   %%%%%%%%%%%%%%%%%%%%%%%%%%
   %% END SOLVE CURVE FITS %%
   %%%%%%%%%%%%%%%%%%%%%%%%%%
-  %%%%%%%%%%%%%%%%%%%%%
-  %% PLOT CURVE FITS %%
-  %%%%%%%%%%%%%%%%%%%%%
+  %%%%%%%%%%%%%%%%
+  %% STATISTICS %%
+  %%%%%%%%%%%%%%%%
+  %The points on the stack are the transformed ones (Xt,Yt). The least
+  %squares problem is Yt = a0 + a1 Xt + ... (without a0 for a given Yint).
+  %ftC: the constant which is not fitted but set with Yint
+  /ftC ReduceOrder { ai 0 get } { 0 } ifelse def
+  /ftOff ReduceOrder { 1 } { 0 } ifelse def
+  /ftPow { 1 exch { 1 index mul } repeat exch pop } def % x k -> x^k
+  /ftPoly { % Xt -> a0 + a1 Xt + ...
+    /ftX ED 0 1 1 m { /fti ED ai fti 1 sub get ftX fti 1 sub ftPow mul add } for } def
+  /ftLev { % Xt -> leverage h = x' A^-1 x
+    /ftX ED 0
+    0 1 ftNp 1 sub { /fti ED
+      0 1 ftNp 1 sub { /ftj ED
+        ftAinv fti ftNp mul ftj add get
+        ftX fti ftOff add ftPow mul ftX ftj ftOff add ftPow mul add
+      } for
+    } for
+    dup 0 lt { pop 0 } if } def
+  plotcoord 2 eq {%statistics of the untransformed values
+    /ftYs { ftC add RYtrans } def % Yt -> y
+    /ftPs { ftPoly RYtrans } def  % Xt -> fitted y
+  }{%statistics of the transformed values
+    /ftYs { } def
+    /ftPs { ftPoly ftC sub } def
+  } ifelse
+  /Xbar 0 def /Ybar 0 def % mean values
+  n {
+    2 copy ftYs Ybar add /Ybar ED Xbar add /Xbar ED
+    n 2 mul 2 roll
+  } repeat
+  n 0 gt { /Xbar Xbar n div def /Ybar Ybar n div def } if
+  /Sxx 0 def /Syy 0 def /Sxy 0 def % sums of squares and products
+  /SSE 0 def                       % sum of squares of the error
+  n {
+    2 copy ftYs /ftY ED /ftXd ED
+    /Sxx ftXd Xbar sub dup mul Sxx add def
+    /Syy ftY Ybar sub dup mul Syy add def
+    /Sxy ftXd Xbar sub ftY Ybar sub mul Sxy add def
+    /SSE ftY ftXd ftPs sub dup mul SSE add def
+    n 2 mul 2 roll
+  } repeat
+  /Sdof n ftNp sub def % degrees of freedom
+  /rsquared Syy 0 eq { 1 } { 1 SSE Syy div sub } ifelse def
+  /Syx Sdof 0 gt { SSE Sdof div sqrt } { 0 } ifelse def % standard error of the fit
+  %Student t, two sided 95%, for 1..30 degrees of freedom and some larger ones
+  /ftT [12.71 4.303 3.182 2.776 2.571 2.447 2.365 2.306 2.262 2.228 2.201 2.179
+        2.160 2.145 2.131 2.120 2.110 2.101 2.093 2.086 2.080 2.074 2.069 2.064
+        2.060 2.056 2.052 2.048 2.045 2.042] def
+  /ftTd [30 40 50 60 80 100 120] def
+  /ftTv [2.042 2.021 2.009 2.000 1.990 1.984 1.980] def
+  (\psk@tvp) length 0 gt { /tvp \psk@tvp\space def }{%
+    /tvp 1.96 def
+    Sdof 1 lt { /tvp 0 def } if
+    Sdof 1 ge Sdof 30 le and { /tvp ftT Sdof 1 sub get def } if
+    0 1 5 { /fti ED
+      Sdof ftTd fti get gt Sdof ftTd fti 1 add get le and {
+        /tvp ftTv fti 1 add get ftTv fti get sub
+             Sdof ftTd fti get sub mul
+             ftTd fti 1 add get ftTd fti get sub div
+             ftTv fti get add def
+      } if
+    } for
+  } ifelse
+  %%%%%%%%%%
+  %% PLOT %%
+  %%%%%%%%%%
   newpath
   (\psk@xStart) length 0 gt             % special start value?
-  { \psk@xStart\space /xStart ED } if 
+  { \psk@xStart\space /xStart ED } if
   (\psk@xEnd) length 0 gt             % special end value?
   { \psk@xEnd\space /xEnd ED } if
   /xStep xEnd xStart sub \psk@plotpoints\space div def
-  /Xnow xStart def
-  /Ynow 0 def
-  1 1 m { /ci exch def ai ci 1 sub get ci 1 sub { Xnow FXtrans mul } repeat Ynow add /Ynow exch def } for
-  Xnow Ynow RYtrans PLU moveto
-  \psk@plotpoints\space cvi
-  { /Xnow Xnow xStep add def
-  /Ynow 0 def
-  1 1 m { /ci exch def ai ci 1 sub get ci 1 sub { Xnow FXtrans mul } repeat Ynow add /Ynow exch def } for
-  Xnow Ynow RYtrans PLU lineto
-  } repeat
-  %
-  /yminusdot 0 def
-  /yminusbar 0 def
-  n {
-    2 copy
-    /Ynow ED
-    /Xnow ED
-    /Ydot 0 def
-    1 1 m { /ci exch def
-     ai ci 1 sub get ci 1 sub { Xnow mul } repeat Ydot add /Ydot exch def } for %
-    Ynow Ydot sub dup mul yminusdot add /yminusdot ED
-    Ynow ybar sub dup mul yminusbar add /yminusbar ED
-    n 2 mul 2 roll
-  } repeat
-  1 yminusdot yminusbar div sub /rsquared ED
-  %%%%%%%%%%%%%%%%%%%%%%%%%
-  %% END PLOT CURVE FITS %%
-  %%%%%%%%%%%%%%%%%%%%%%%%%
+  /ftCurve { % sign bool -> one curve: the fit (sign 0) or the upper (1) or
+             % lower (-1) limit of the confidence (false) or prediction (true) interval
+    /ftPI ED /ftS ED
+    /Xnow xStart def
+    0 1 \psk@plotpoints\space cvi { /ftk ED
+      /ftXt Xnow FXtrans def
+      /ftYt ftXt ftPoly def
+      /ftE ftS 0 eq { 0 }{%
+        ftXt ftLev ftPI { 1 add } if sqrt Syx mul tvp mul ftS mul } ifelse def
+      plotcoord 1 eq { ftXt ftYt ftC sub ftE add }{%
+        plotcoord 2 eq { Xnow ftYt RYtrans ftE add }{ Xnow ftYt ftE add RYtrans } ifelse
+      } ifelse
+      PLU ftk 0 eq { moveto } { lineto } ifelse
+      /Xnow Xnow xStep add def
+    } for } def
+  plottype 0 eq { 0 false ftCurve } if
+  plottype 2 eq plottype 4 eq or { 1 false ftCurve } if
+  plottype 3 eq plottype 4 eq or { -1 false ftCurve } if
+  plottype 5 eq plottype 7 eq or { 1 true ftCurve } if
+  plottype 6 eq plottype 7 eq or { -1 true ftCurve } if
+  %Standardised residuals e/(Syx sqrt(1-h)), marked with a cross at the x
+  %value of the data point (the transformed x value for plotcoord=trans)
+  plottype 1 eq {
+    /ftR \psk@fontscale\space 0.3 mul def
+    0 1 n 1 sub { /ftk ED
+      2 copy ftYs /ftY ED /ftXd ED
+      /ftE ftY ftXd ftPs sub def
+      /ftH 1 ftXd ftLev sub def
+      ftH 0.000001 lt { /ftH 0.000001 def } if
+      Syx 0 gt { /ftE ftE Syx ftH sqrt mul div def } if
+      plotcoord 1 eq { ftXd }{%
+        ftRaw n 1 sub ftk sub 2 mul get \pst@number\psxunit\space div } ifelse
+      ftE PLU
+      2 copy exch ftR sub exch moveto ftR 2 mul 0 rlineto
+      ftR sub moveto 0 ftR 2 mul rlineto
+      n 2 mul 2 roll
+    } for
+  } if
   %%%%%%%%%%%%%%%%%%%%%%%%%%%
   %% START PRINT EQUATIONS %%
   %%%%%%%%%%%%%%%%%%%%%%%%%%%
   %% http://www-k12.atmos.washington.edu/~ovens/gmt/doc/html/GMT_Docs/node153.html
   \ifPst@ShowEq
-  % Setup Cursor
-  (\psk@EqPos) length 0 gt
-  {\psk@EqPos\space PLU }
-  {2 -5 PLU } ifelse moveto
+  /RoundNum {%
+    \psk@decimals\space -1 gt { 10 \psk@decimals\space exp dup 3 1 roll mul round exch div } if
+    \psk@decimals\space 0 eq { cvi } if } def
+  /ShowNum { % number or string
+    \psk@valuewidth\space 30 2 copy lt { exch } if pop string cvs
+    \ifPst@comma\space dot2comma \fi show } def
+  /ShowSup { % string as superscript
+    0 \psk@fontscale\space 2 div rmoveto mfontexp show mfont
+    0 \psk@fontscale\space 2 div neg rmoveto } def
+  /ShowSub { % string as subscript
+    0 \psk@fontscale\space 5 div neg rmoveto mfontexp show mfont
+    0 \psk@fontscale\space 5 div rmoveto } def
+  /ShowBar { % string with a bar on top, for the mean values
+    CP /ftBy ED /ftBx ED show CP pop /ftBxx ED
+    gsave newpath [] 0 setdash \psk@fontscale\space 0.05 mul setlinewidth
+    ftBx ftBy \psk@fontscale\space 0.65 mul add moveto
+    ftBxx ftBy \psk@fontscale\space 0.65 mul add lineto stroke grestore } def
+  % Every printed line starts below the last one
+  (\psk@EqPos) length 0 gt { \psk@EqPos\space }{ 2 -5 } ifelse PLU /ftEqY ED /ftEqX ED
+  /linecount 0 def
+  /ftNewLine {%
+    ftEqX ftEqY \psk@fontscale\space 1.5 mul linecount mul sub moveto
+    /linecount linecount 1 add def mfont } def
+  /PrintParam { % index {label} value -> one line, if it is selected in printconfig
+    /ftV ED /ftL ED
+    printconfig exch get 1 eq {%
+      ftNewLine ftL
+      ftV type /integertype eq { ftV } { ftV RoundNum } ifelse ShowNum
+    } if } def
+  /ftLimit { % Xt -> line with the half width of the confidence interval at Xt
+    /ftXt ED ftNewLine
+    sfont (d) show mfont (y) show (c) ShowSub
+    (\string\050) show ftXt RoundNum ShowNum (\string\051) show ( = ) show
+    sfont (\string\261) show mfont
+    ftXt ftLev sqrt Syx mul tvp mul RoundNum ShowNum } def
+  %
+  printconfig 0 get 1 eq {%
+  ftNewLine
  % Power Fit Equation %
-  \psk@PowerFit\space {
-  10 ai 0 get exp
-  \psk@decimals\space -1 gt
-    { 10 \psk@decimals exp dup 3 1 roll mul round exch div } if
-    \psk@decimals\space 0 eq { cvi } if  /tmpA exch def
-  ai 1 get
-  \psk@decimals\space -1 gt
-    { 10 \psk@decimals exp dup 3 1 roll mul round exch div } if
-    \psk@decimals\space 0 eq { cvi } if  /tmpB exch def
+  \psk@PowerFit\space PolyEq not and {
+  10 ai 0 get exp RoundNum /tmpA exch def
+  ai 1 get RoundNum /tmpB exch def
   (y = ) show
-  tmpA  \psk@valuewidth string cvs \ifPst@comma\space dot2comma \fi show
+  tmpA ShowNum
   (x) show
-  0 \psk@fontscale 4 div rmoveto
-  mfontexp tmpB \psk@valuewidth string cvs \ifPst@comma\space dot2comma \fi show mfont
-  0 \psk@fontscale 4 div neg rmoveto
-  setYint Yint 0 ne and { Yint 0 gt { (+) show } if Yint 
-    \psk@valuewidth string cvs \ifPst@comma\space dot2comma \fi show } if } if
+  0 \psk@fontscale\space 4 div rmoveto
+  mfontexp tmpB ShowNum mfont
+  0 \psk@fontscale\space 4 div neg rmoveto
+  setYint Yint 0 ne and { Yint 0 gt { (+) show } if Yint ShowNum } if } if
  % Exponential Fit Equation %
-  \psk@ExpFit\space {
-  Euler ai 0 get exp
-  \psk@decimals\space -1 gt
-    { 10 \psk@decimals exp dup 3 1 roll mul round exch div } if
-    \psk@decimals\space 0 eq { cvi } if  /tmpA exch def 
-  Euler ai 1 get exp
-  \psk@decimals\space -1 gt
-    { 10 \psk@decimals exp dup 3 1 roll mul round exch div } if
-    \psk@decimals\space 0 eq { cvi } if  /tmpB exch def
+  \psk@ExpFit\space PolyEq not and {
+  Euler ai 0 get exp RoundNum /tmpA exch def
+  Euler ai 1 get exp RoundNum /tmpB exch def
   (y = ) show
-  (\string\050) show tmpA \psk@valuewidth string \ifPst@comma\space dot2comma \fi cvs 
-    \ifPst@comma\space dot2comma \fi show (\string\051) show
-  %(e) show
+  (\string\050) show tmpA ShowNum (\string\051) show
   (\string\264) show  % centered dot
-  %0 \psk@fontscale 4 div rmoveto
-  %mfontexp tmpB \psk@valuewidth string cvs show
-  (\string\050) show tmpB \psk@valuewidth string \ifPst@comma\space dot2comma \fi cvs 
-    \ifPst@comma\space dot2comma \fi show (\string\051) show   %( )
-  0 \psk@fontscale 2 div rmoveto
+  (\string\050) show tmpB ShowNum (\string\051) show
+  0 \psk@fontscale\space 2 div rmoveto
   mfontexp (x) show mfont
-  0 \psk@fontscale 2 div neg rmoveto
-  setYint Yint 0 ne and { Yint 0 gt { (+) show } if Yint 
-    \psk@valuewidth string cvs \ifPst@comma\space dot2comma \fi show } if} if
+  0 \psk@fontscale\space 2 div neg rmoveto
+  setYint Yint 0 ne and { Yint 0 gt { (+) show } if Yint ShowNum } if } if
   % Gaussian Fit Equation %
-  \psk@GaussFit\space {
+  \psk@GaussFit\space PolyEq not and {
   /tmpA Euler ai 0 get ai 1 get dup mul 4 div ai 2 get div sub exp def
   /tmpB ai 1 get 2 div ai 2 get div def
   /tmpC ai 2 get def
-  tmpA
-  \psk@decimals\space -1 gt
-    { 10 \psk@decimals exp dup 3 1 roll mul round exch div } if
-    \psk@decimals\space 0 eq { cvi } if  /tmpA exch def
-  tmpB
-  \psk@decimals\space -1 gt
-    { 10 \psk@decimals exp dup 3 1 roll mul round exch div } if
-    \psk@decimals\space 0 eq { cvi } if  /tmpB exch def
-  tmpC
-  \psk@decimals\space -1 gt
-    { 10 \psk@decimals exp dup 3 1 roll mul round exch div } if
-    \psk@decimals\space 0 eq { cvi } if  /tmpC exch def
+  tmpA RoundNum /tmpA exch def
+  tmpB RoundNum /tmpB exch def
+  tmpC RoundNum /tmpC exch def
   (y = ) show
-  tmpA 30 string cvs \ifPst@comma\space dot2comma \fi show
+  tmpA ShowNum
   (e) show
-  0 \psk@fontscale 4 div rmoveto
-  mfontexp tmpC \psk@valuewidth string cvs \ifPst@comma\space dot2comma \fi show
+  0 \psk@fontscale\space 4 div rmoveto
+  mfontexp tmpC ShowNum
   (\string\(x) show
-  tmpB 0 ne { tmpB 0 ge { (+) show } if tmpB 
-    \psk@valuewidth string cvs \ifPst@comma\space dot2comma \fi show } if
+  tmpB 0 ne { tmpB 0 ge { (+) show } if tmpB ShowNum } if
   (\string\)) show
-  0 \psk@fontscale 4 div rmoveto (2) show mfont
-  0 \psk@fontscale 2 div neg rmoveto
-  setYint Yint 0 ne and { Yint 0 gt { (+) show } if Yint 
-    \psk@valuewidth string cvs \ifPst@comma\space dot2comma \fi show } if } if
+  0 \psk@fontscale\space 4 div rmoveto (2) show mfont
+  0 \psk@fontscale\space 2 div neg rmoveto
+  setYint Yint 0 ne and { Yint 0 gt { (+) show } if Yint ShowNum } if } if
   %%%%%%%%%%%%%%%
   % Round Coeff %
   %%%%%%%%%%%%%%%
   0 1 ai length 1 sub {/ci exch def
-    ai ci get
-    \psk@decimals\space -1 gt
-    { 10 \psk@decimals exp dup 3 1 roll mul round exch div } if
-    \psk@decimals\space 0 eq { cvi } if
+    ai ci get RoundNum
   ai ci 3 -1 roll put } for
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   % Plot Polynomial (including Linear) Fit %
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  PolyEq { (y =) show
+  % Terms with a coefficient of zero are omitted. The constant is also
+  % omitted in the transformed coordinates when it was set with Yint.
+  PolyEq { (y = ) show
+  /ftFirst true def
   1 1 m { /ci exch def
-          ai ci 1 sub get 30 string cvs \ifPst@comma\space dot2comma \fi show
-          ci 1 sub 0 gt { xPr } if
-          ci 1 sub 1 gt {%
-             0 \psk@fontscale 4 div rmoveto ci 1 sub 30 string cvs 
-             \ifPst@comma\space dot2comma \fi show
-             0 \psk@fontscale 4 div neg rmoveto } if 
-          ci m eq not { ai ci get 0 lt {}{ (+) show } ifelse } if
-  } for } if
-  %Print Rsquared
-  rsquared
-  \psk@decimals\space -1 gt
-  { 10 \psk@decimals exp dup 3 1 roll mul round exch div } if
-  \psk@decimals\space 0 eq { cvi } if  /rsquared exch def
-  \psk@EqPos\space PLU moveto
-  0 \psk@fontscale 1.5 mul neg rmoveto
-%  \define@boolkey[psset]{pst-tools}[Pst@]{comma}[true]{%
-%  \ifPst@comma\def\psk@decimalSeparator{,}\else\def\psk@decimalSeparator{.}\fi}
-  (R) show
-  0 \psk@fontscale 2 div rmoveto
-  mfontexp (2) show mfont
-  0 \psk@fontscale 2 div neg rmoveto
-  ( = ) show
-  rsquared \psk@valuewidth string cvs \ifPst@comma\space dot2comma \fi show
-  \fi 
+          /ftV ai ci 1 sub get def
+          ftV 0 ne plotcoord 1 eq ReduceOrder and ci 1 eq and not and {%
+            ftFirst not ftV 0 ge and { (+) show } if
+            ftV ShowNum
+            ci 1 sub 0 gt { xPr } if
+            ci 1 sub 1 gt {%
+               0 \psk@fontscale\space 4 div rmoveto ci 1 sub ShowNum
+               0 \psk@fontscale\space 4 div neg rmoveto } if
+            /ftFirst false def
+          } if
+  } for
+  ftFirst { 0 ShowNum } if } if
+  } if % printconfig 0
+  1 { (R) show (2) ShowSup ( = ) show } rsquared PrintParam
+  2 { (t) show (v,P) ShowSub ( = ) show } tvp PrintParam
+  3 { (S) show (dof) ShowSub ( = ) show } Sdof PrintParam
+  4 { (S) show (xx) ShowSub ( = ) show } Sxx PrintParam
+  5 { (S) show (yy) ShowSub ( = ) show } Syy PrintParam
+  6 { (S) show (xy) ShowSub ( = ) show } Sxy PrintParam
+  7 { (S) show (yx) ShowSub ( = ) show } Syx PrintParam
+  8 { (x) ShowBar ( = ) show } Xbar PrintParam
+  9 { (y) ShowBar ( = ) show } Ybar PrintParam
+  % Half width of the confidence interval at the first x value, at the mean
+  % of x, where it is the smallest, and at the last x value
+  printconfig 10 get 1 eq {%
+    xStart FXtrans ftLimit Xbar ftLimit xEnd FXtrans ftLimit
+  } if
+  \fi
 }
 %
 \def\tx@GaussSolve{GaussSolve }
@@ -943,7 +1124,7 @@ n 0 eq not
       put
     } for
   } for
-    \Pst@Debug\space 1 eq {
+    \Pst@Debug\space 1 eq praQuiet not and {
     A [ order 1 add order 1 add praXr praYt \psk@MaScale\space true false ] PRA
     B [ order 1 add 1 praXr praYt \psk@MaScale\space false true ] PRA
   } if
@@ -983,7 +1164,7 @@ n 0 eq not
   sc ck 1 sub get div
   dup mul sqrt tol lt { /er -1 def } if
   } if
-  \Pst@Debug\space 1 eq {
+  \Pst@Debug\space 1 eq praQuiet not and {
   Aout [ order 1 add order 1 add praXr praYt \psk@MaScale\space true false ] PRA
   ai [ order 1 add 1 praXr praYt \psk@MaScale\space false false ] PRA } if}>
 

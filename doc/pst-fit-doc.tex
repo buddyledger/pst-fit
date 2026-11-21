@@ -19,6 +19,8 @@
 \readdata[ignoreLines=0]{\Poly}{poly.dat}
 \readdata[ignoreLines=0]{\Logt}{logt.dat}
 \readdata[ignoreLines=0]{\Loge}{loge.dat}
+\readdata[ignoreLines=0]{\Calib}{calib.dat}
+\readdata[ignoreLines=0]{\PScatter}{pscatter.dat}
 
 
 \renewcommand\bgImage{%
@@ -160,6 +162,165 @@ Herbert Voß}
 \listplot[plotstyle=PrintCoor,plotNoMax=1,plotNo=1,PstDebug=0,relxerr=0,relyerr=0.1]{\Linear}
 \listplot[plotstyle=dots,plotNoMax=1,plotNo=1]{\Linear}
 \pstScalePoints(1,1){}{}
+\end{psgraph}
+\end{LTXexample}
+
+\section{Regression statistics}
+The least squares fit is linear in its coefficients. For the special fit
+functions the data is first transformed, e.\,g.\ with the logarithm, and the
+statistics below are those of the transformed data, where the fit is a straight
+line or a polynomial (see \Lkeyword{plotcoord} for the alternatives).
+With $n$ data points, $p$ fitted coefficients and the fitted values $\hat y_i$:
+\begin{align*}
+S_{xx} &= \sum (x_i-\bar x)^2 &
+S_{yy} &= \sum (y_i-\bar y)^2 &
+S_{xy} &= \sum (x_i-\bar x)(y_i-\bar y)\\
+\mathit{SSE} &= \sum (y_i-\hat y_i)^2 &
+R^2 &= 1-\frac{\mathit{SSE}}{S_{yy}} &
+S_{yx} &= \sqrt{\frac{\mathit{SSE}}{S_{\mathrm{dof}}}},\quad S_{\mathrm{dof}}=n-p
+\end{align*}
+$S_{yx}$ is the standard error of the fit and $S_{\mathrm{dof}}$ the number of
+degrees of freedom. The optional argument \Lkeyword{printconfig} takes up to 11 flags
+(\texttt{0} or \texttt{1}) which select the lines to print below each other at
+\Lkeyword{EqPos}. The default is \texttt{1 1 0 0 0 0 0 0 0 0 0}, the equation
+and $R^2$.
+
+\medskip
+\begin{tabular}{@{}cl@{\qquad}cl@{}}\hline
+flag & printed line & flag & printed line\\\hline
+1 & equation of the fit                   & 7  & $S_{xy}$\\
+2 & $R^2$                                 & 8  & $S_{yx}$\\
+3 & Student $t$ value $t_{v,P}$           & 9  & mean value $\bar x$\\
+4 & degrees of freedom $S_{\mathrm{dof}}$ & 10 & mean value $\bar y$\\
+5 & $S_{xx}$                              & 11 & half width $\delta y_c$ of the confidence interval\\
+6 & $S_{yy}$                              &    & at the first $x$, at $\bar x$ and at the last $x$\\\hline
+\end{tabular}
+
+\begin{LTXexample}[pos=t]
+\begin{psgraph}[arrows=->,Dy=2](0,0)(0,0)(10,22){4.5in}{4.5in}
+\listplot[decimals=3,EqPos=1 21,plotstyle=GLLSR,linestyle=dashed,
+  printconfig=1 1 1 1 1 1 1 1 1 1 1]{\Calib}
+\listplot[plotstyle=dots,linecolor=red,dotscale=2,dotstyle=x]{\Calib}
+\end{psgraph}
+\end{LTXexample}
+
+\section{Confidence and prediction intervals}
+The optional argument \Lkeyword{plottype} selects what the plot style \texttt{GLLSR} draws:
+
+\medskip
+\begin{tabular}{@{}ll@{}}\hline
+\Lkeyword{plottype} & meaning\\\hline
+\texttt{fit} & the fitted curve (default)\\
+\texttt{upperci}, \texttt{lowerci}, \texttt{bothci} & limits of the confidence interval of the fit\\
+\texttt{upperpi}, \texttt{lowerpi}, \texttt{bothpi} & limits of the prediction interval\\
+\texttt{residuals} & the standardised residuals\\\hline
+\end{tabular}
+
+\medskip
+The confidence interval of the fit (of the mean response) is the range in
+which the fitted curve itself lies with a given probability. The prediction
+interval is the range in which a single new measurement is expected, it is wider:
+\[
+\hat y(x) \pm t_{v,P}\,S_{yx}\sqrt{h(x)}
+\qquad\text{and}\qquad
+\hat y(x) \pm t_{v,P}\,S_{yx}\sqrt{1+h(x)}
+\]
+For a straight line the leverage is $h(x)=1/n+(x-\bar x)^2/S_{xx}$; for a
+polynomial it is calculated from the inverse of the least squares matrix.
+$t_{v,P}$ is the two sided 95\,\% value of the Student $t$ distribution for
+$S_{\mathrm{dof}}$ degrees of freedom, which is taken from a table. Another
+value can be set with the optional argument \Lkeyword{tvp}, e.\,g.\ \texttt{tvp=3.355}
+for 99\,\% and 8 degrees of freedom. For the intervals use \texttt{ShowEq=false},
+otherwise the equation is printed again.
+
+\begin{LTXexample}[pos=t]
+\begin{psgraph}[arrows=->,Dy=2](0,0)(0,0)(10,22){4.5in}{4.5in}
+\psset{plotstyle=GLLSR,ShowEq=false}
+\listplot[ShowEq,decimals=2,EqPos=1 20]{\Calib}
+\listplot[plottype=bothci,linestyle=dashed,linecolor=blue]{\Calib}
+\listplot[plottype=bothpi,linestyle=dotted,linecolor=red]{\Calib}
+\listplot[plotstyle=dots]{\Calib}
+\end{psgraph}
+\end{LTXexample}
+
+The intervals are also available for the other fit functions. They are
+calculated for the transformed data and then transformed back, here for
+a fit of a power function:
+
+\begin{LTXexample}[pos=t]
+\begin{psgraph}[arrows=->,Dy=10](0,0)(0,0)(10,80){4.5in}{4.5in}
+\psset{plotstyle=GLLSR,PowerFit,ShowEq=false}
+\listplot[ShowEq,decimals=2,EqPos=1 70]{\PScatter}
+\listplot[plottype=bothci,linestyle=dashed,linecolor=blue]{\PScatter}
+\listplot[plottype=bothpi,linestyle=dotted,linecolor=red]{\PScatter}
+\listplot[plotstyle=dots]{\PScatter}
+\end{psgraph}
+\end{LTXexample}
+
+\section{Standardised residuals}
+With \texttt{plottype=residuals} a cross is drawn for every data point at its
+$x$ value and at the height of its standardised residual
+$e_i^*=(y_i-\hat y_i)/\bigl(S_{yx}\sqrt{1-h(x_i)}\bigr)$.
+Without a systematic deviation of the data from the fit function the
+residuals scatter randomly around zero and nearly all of them are between $-2$ and $2$.
+
+\begin{LTXexample}[pos=t]
+\begin{psgraph}[Dy=1,Oy=-3](0,-3)(0,-3)(10,3){4.5in}{2.5in}
+\psline[linestyle=dashed](0,0)(10,0)
+\psline[linestyle=dotted](0,2)(10,2)\psline[linestyle=dotted](0,-2)(10,-2)
+\listplot[plotstyle=GLLSR,plottype=residuals,ShowEq=false,linecolor=red]{\Calib}
+\end{psgraph}
+\end{LTXexample}
+
+\section{Plot in the transformed coordinates}
+The optional argument \Lkeyword{plotcoord} selects the coordinates for the plot
+and the statistics:
+
+\medskip
+\begin{tabular}{@{}lp{0.8\linewidth}@{}}\hline
+\Lkeyword{plotcoord} & meaning\\\hline
+\texttt{normal} & Plot in the coordinates of the data. The statistics are those
+  of the transformed data (default).\\
+\texttt{trans} & Plot in the transformed coordinates, where the fit is a
+  straight line or a polynomial. The equation is the one of this polynomial.\\
+\texttt{special} & Plot in the coordinates of the data, but with the statistics of the
+  untransformed data: $\mathit{SSE}$, $S_{yy}$ and $S_{yx}$ are calculated from the values of
+  $y$ itself and the intervals have the same width in $y$ direction for a given leverage.\\\hline
+\end{tabular}
+
+\medskip
+The following example shows the fit of the power function from the last
+but one section with \texttt{plotcoord=trans}. The axes are $\log x$ and $\log y$,
+the data points are transformed with \Lcs{pstScalePoints}. This must be reset
+before the fit, which transforms the data itself.
+
+\begin{LTXexample}[pos=t]
+\begin{psgraph}[arrows=->,Dx=0.2,Dy=0.5](0,0)(0,0)(1.1,2.2){4.5in}{3.5in}
+\pstScalePoints(1,1){log}{log}
+\listplot[plotstyle=dots]{\PScatter}
+\pstScalePoints(1,1){}{}
+\psset{plotstyle=GLLSR,PowerFit,plotcoord=trans,ShowEq=false}
+\listplot[ShowEq,decimals=2,EqPos=0.1 2]{\PScatter}
+\listplot[plottype=bothci,linestyle=dashed,linecolor=blue]{\PScatter}
+\listplot[plottype=bothpi,linestyle=dotted,linecolor=red]{\PScatter}
+\end{psgraph}
+\end{LTXexample}
+
+\section{Error bars with a function}
+The plot style \texttt{ErrorLine} draws error bars with a length relative to
+the value (\Lkeyword{relxerr}, \Lkeyword{relyerr}). With the plot style
+\texttt{ErrorFunction} the length is calculated with PostScript code, given with the
+optional arguments \Lkeyword{xerrfunc} and \Lkeyword{yerrfunc}. The code finds the
+$x$ value (or the $y$ value) of the point on the stack and has to replace it by
+the absolute error. In the example the error in $x$ is always $0.2$ and
+the error in $y$ is 5\,\% of the value plus $0.3$.
+
+\begin{LTXexample}[pos=t]
+\begin{psgraph}[arrows=->,Dy=2](0,0)(0,0)(11,22){4.5in}{4.5in}
+\listplot[plotstyle=ErrorFunction,arrows=|-|,arrowscale=0.5,
+  xerrfunc=pop 0.2,yerrfunc=0.05 mul 0.3 add]{\Calib}
+\listplot[plotstyle=dots]{\Calib}
+\listplot[decimals=2,EqPos=1 20,plotstyle=GLLSR,linecolor=blue]{\Calib}
 \end{psgraph}
 \end{LTXexample}
 
