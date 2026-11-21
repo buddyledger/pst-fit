@@ -1,0 +1,79 @@
+name: Sync bignum library
+
+# Rebuilds dvips/pst-fit-bignum.pro from bignumlibrary.ps of the repository
+# buddyledger/postscript-math. If the library changed, the new header is
+# tested and offered as a pull request; nothing is changed on main directly.
+#
+# It runs once a week, by hand (Actions tab, or `gh workflow run sync-bignum.yml`),
+# and on a repository_dispatch event of type "bignum-updated", which
+# postscript-math can send to start it right after a push.
+
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+  repository_dispatch:
+    types: [bignum-updated]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  UPSTREAM: buddyledger/postscript-math
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch the library
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.UPSTREAM }}
+          path: upstream
+
+      - name: Rebuild the header
+        id: build
+        run: |
+          rev=$(git -C upstream log -1 --format=%h --abbrev=7 -- bignumlibrary.ps)
+          bash tools/make-bignum-header.sh upstream/bignumlibrary.ps "$rev"
+          rm -rf upstream
+          echo "rev=$rev" >> "$GITHUB_OUTPUT"
+          if git diff --quiet -- dvips/pst-fit-bignum.pro; then
+            echo "The header is up to date with $UPSTREAM@$rev."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git diff --stat -- dvips/pst-fit-bignum.pro
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Test the new header
+        if: steps.build.outputs.changed == 'true'
+        run: docker run --rm -v "$PWD:/pkg:ro" texlive/texlive:latest bash /pkg/tools/bignum-test.sh
+
+      - name: Push a branch and open a pull request
+        if: steps.build.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REV: ${{ steps.build.outputs.rev }}
+        run: |
+          branch="sync/bignum-$REV"
+          if git ls-remote --exit-code --heads origin "$branch" > /dev/null; then
+            echo "Branch $branch exists already, nothing to do."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add dvips/pst-fit-bignum.pro
+          git commit -m "Update bignum header to $UPSTREAM@$REV"
+          git push origin "$branch"
+          body="Rebuilt \`dvips/pst-fit-bignum.pro\` from https://github.com/$UPSTREAM/commit/$REV with \`tools/make-bignum-header.sh\`. The header check and the bignum fit test passed in the sync run. Before a release: bump the version, add a line to \`Changes\`."
+          if gh pr create --base main --head "$branch" \
+               --title "Update bignum header to postscript-math@$REV" --body "$body"; then
+            echo "Pull request opened."
+          else
+            echo "::warning::Branch $branch was pushed, but the pull request could not be opened. Open it by hand: https://github.com/$GITHUB_REPOSITORY/compare/$branch?expand=1"
+          fi

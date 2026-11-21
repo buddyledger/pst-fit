@@ -21,6 +21,7 @@
 \readdata[ignoreLines=0]{\Loge}{loge.dat}
 \readdata[ignoreLines=0]{\Calib}{calib.dat}
 \readdata[ignoreLines=0]{\PScatter}{pscatter.dat}
+\readdata[ignoreLines=0]{\Kelvin}{kelvin.dat}
 
 
 \renewcommand\bgImage{%
@@ -329,6 +330,51 @@ the error in $y$ is 5\,\% of the value plus $0.3$.
 \listplot[decimals=2,EqPos=1 20,plotstyle=GLLSR,linecolor=blue]{\Calib}
 \end{psgraph}
 \end{LTXexample}
+
+\section{Arbitrary precision arithmetic}
+The fit is calculated by the PostScript interpreter. With \texttt{latex},
+\texttt{dvips} and Ghostscript the numbers have single precision, about 7
+digits. This is not enough for the sums of the least squares method, if the
+$x$ values are far from zero or if the order of the polynomial is high. The
+result is then a wrong curve, without any warning. With the optional argument
+\Lkeyword{bignum} the sums, the solution of the equations, the fitted values and
+the values for the intervals are calculated with decimal numbers of the given
+number of digits; \texttt{bignum} without a value means 20 digits and
+\texttt{bignum=0}, the default, switches it off.
+
+The table shows the fit of a polynomial of second order to the data of the
+example below, which has $x$ values from 293 to 302, compiled with
+\texttt{latex}, \texttt{dvips} and Ghostscript 10.08:
+
+\medskip
+\begin{tabular}{@{}lll@{}}\hline
+ & equation & $R^2$\\\hline
+without \texttt{bignum} & $y=-530.786-5.02072x+0.02322x^2$ & 0.951966\\
+with \texttt{bignum=20} & $y=68448.6-468.787x+0.802651x^2$ & 0.999716\\
+exact & $y=68448.6-468.787x+0.802652x^2$ & 0.999716\\\hline
+\end{tabular}
+
+\medskip
+The data itself still has only the precision of the interpreter, therefore the
+last digits of a coefficient can differ, as in the table. The calculation
+takes longer, some tenths of a second for a figure like the following one.
+
+\begin{LTXexample}[pos=t]
+\begin{psgraph}[arrows=->,Dy=20,Dx=2,Ox=292](292,0)(292,0)(303,90){4.5in}{3.5in}
+\psset{plotstyle=GLLSR,PolyOrder=2,bignum=20,ShowEq=false}
+\listplot[ShowEq,decimals=3,EqPos=292.5 85]{\Kelvin}
+\listplot[plottype=bothci,linestyle=dashed,linecolor=blue]{\Kelvin}
+\listplot[plotstyle=dots]{\Kelvin}
+\end{psgraph}
+\end{LTXexample}
+
+With Lua\LaTeX{} the numbers have double precision, about 15 digits, which is
+enough for nearly all data. There the decimal numbers would be very slow and
+the option is ignored. This document is compiled with Lua\LaTeX.
+
+The decimal numbers are provided by the header file \texttt{pst-fit-bignum.pro},
+which is loaded by the package. It is the PostScript library
+\texttt{bignumlibrary.ps} from \url{https://github.com/buddyledger/postscript-math}.
 
 \clearpage
 \section{List of all optional arguments for \texttt{pst-fit}}

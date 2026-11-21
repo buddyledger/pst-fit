@@ -53,7 +53,7 @@ jobs:
       - name: Build CTAN archive
         run: |
           mkdir -p "build/$PKG"
-          cp -r README Changes doc latex tex "build/$PKG/"
+          cp -r README Changes doc dvips latex tex "build/$PKG/"
           (cd build && zip -r "$PKG.zip" "$PKG")
           unzip -l "build/$PKG.zip"
 

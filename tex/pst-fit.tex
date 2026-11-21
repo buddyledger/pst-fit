@@ -23,9 +23,11 @@
 \ifx\PSTricksAddLoaded\endinput\else\input pstricks-add.tex\fi
 \ifx\PSTXKeyLoaded\endinput\else    \input pst-xkey \fi
 %
-\def\fileversion{0.04}
-\def\filedate{2026/11/20}
+\def\fileversion{0.05}
+\def\filedate{2026/11/21}
 \message{`PST-fit' v\fileversion, \filedate\space (BL,HV)}
+%
+\pstheader{pst-fit-bignum.pro}% arbitrary precision arithmetic, for the option bignum
 %
 \edef\PstAtCode{\the\catcode`\@} \catcode`\@=11\relax
 %
@@ -495,11 +497,14 @@ n 0 eq not
 % tvp: Student t value for the intervals. Empty (default): two sided 95%
 %   value for the degrees of freedom of the fit, taken from a table.
 \define@key[psset]{pst-fit}{tvp}[{}]{\def\psk@tvp{#1}}
+%bignum: number of digits for the arbitrary precision arithmetic of the fit,
+%0 switches it off, bignum without a value means 20 digits
+\define@key[psset]{pst-fit}{bignum}[20]{\def\psk@bignum{#1}}
 % printconfig: up to 11 flags (0 or 1) which select the printed lines:
 %   equation, R^2, t value, degrees of freedom, Sxx, Syy, Sxy, Syx,
 %   mean of x, mean of y, half width of the confidence interval
 \define@key[psset]{pst-fit}{printconfig}[{}]{\def\psk@printconfig{#1}}
-\psset[pst-fit]{plottype=fit,plotcoord=normal,tvp=,printconfig=1 1 0 0 0 0 0 0 0 0 0}
+\psset[pst-fit]{plottype=fit,plotcoord=normal,tvp=,bignum=0,printconfig=1 1 0 0 0 0 0 0 0 0 0}
 
 \def\beginplot@GLLSR{\begin@SpecialObj}
 \def\endplot@GLLSR{%
@@ -666,6 +671,156 @@ n 0 eq not
     /praQuiet false def
     /A ftsvA def /B ftsvB def /ai ftsvai def
   } def
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  %% ARBITRARY PRECISION ARITHMETIC %%
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  %With the option bignum the sums, the solution of the least squares system,
+  %its inverse, the fitted values and the leverage are calculated with the
+  %decimal numbers of pst-fit-bignum.pro. The reals of Ghostscript have only
+  %about 7 digits, which is not enough for x values far from zero or for
+  %polynomials of a higher order.
+  %It is only used where the reals have single precision. An interpreter with
+  %double precision reals (luapstricks) is accurate enough and much slower
+  %with the decimal numbers.
+  /ftBig \psk@bignum\space cvi 0 gt /tx@bnDict where { pop true }{ false } ifelse and
+    16777217 cvr 16777216 cvr eq and def
+  ftBig {
+    %The library needs its dictionary on the dictionary stack. It is taken
+    %from there again after every call, so that nothing of pst-fit is
+    %defined in it.
+    /ftB { tx@bnDict exch get tx@bnDict begin exec end } def
+    \psk@bignum\space cvi /setbnsize ftB
+    /ftBmul { /mulbn ftB } def /ftBadd { /addbn ftB } def
+    /ftBsub { /subbn ftB } def /ftBdiv { /divbn ftB } def
+    /ftBint { /setbn ftB } def  % integer -> bignum
+    /ftBreal { /bncvr ftB } def % bignum -> real
+    /ftB5 [ 1 ftBint ] def      % the powers of five, as far as needed
+    /ftBpow5 { % k -> 5^k
+      dup ftB5 length ge {
+        dup 1 add array dup 0 ftB5 putinterval
+        ftB5 length 1 2 index length 1 sub {
+          2 copy 2 copy 1 sub get 5 ftBint ftBmul put pop } for
+        /ftB5 ED } if
+      ftB5 exch get } def
+    %number -> bignum. A real is v/2^k with an integer v, which is
+    %v*5^k/10^k. (setbn would only keep the 6 digits which cvs writes.)
+    /ftBN {
+      dup 0 eq { pop 0 ftBint }{
+        dup 0 lt /ftBneg ED abs /ftBk 0 def
+        { dup dup floor eq ftBk 1100 ge or { exit } if 2 mul /ftBk ftBk 1 add def } loop
+        /ftBv ED /ftBacc 0 ftBint def /ftBsc 1 ftBint def
+        { ftBv 1048576 div floor /ftBhi ED
+          ftBv ftBhi 1048576 mul sub cvi ftBint ftBsc ftBmul ftBacc ftBadd /ftBacc ED
+          ftBhi 0 eq { exit } if
+          /ftBv ftBhi def /ftBsc ftBsc 1048576 ftBint ftBmul def } loop
+        ftBacc ftBk ftBpow5 ftBmul
+        dup 2 2 copy get ftBk sub put
+        ftBneg { /negbn ftB } if
+      } ifelse } def
+    /ftPolyB { % Xt -> a0 + a1 Xt + ...
+      ftBN /ftBx ED ftBai dup length 1 sub get
+      ftBai length 2 sub -1 0 { ftBai exch get exch ftBx ftBmul ftBadd } for
+      ftBreal } def
+    /ftLevB { % Xt -> leverage h = x' A^-1 x
+      ftBN /ftBx ED
+      /ftBpw ftNp ftOff add array def
+      ftBpw 0 1 ftBint put
+      1 1 ftBpw length 1 sub { dup ftBpw exch 1 sub get ftBx ftBmul ftBpw 3 1 roll put } for
+      0 ftBint
+      0 1 ftNp 1 sub { /fti ED
+        0 1 ftNp 1 sub { /ftj ED
+          ftBAinv fti ftNp mul ftj add get
+          ftBpw fti ftOff add get ftBmul ftBpw ftj ftOff add get ftBmul ftBadd
+        } for
+      } for
+      ftBreal dup 0 lt { pop 0 } if } def
+    %Sums of the transformed points ftPts, Gauss-Jordan elimination with
+    %pivoting of [ N | I ], which gives the inverse, and the coefficients
+    %ftBaiR. ftBok is false for a singular matrix.
+    /ftCalcInvB {
+      /ftNp order 1 add def
+      /ftBo ReduceOrder { 1 }{ 0 } ifelse def
+      /ftBkm ftNp 1 sub ftBo add def
+      /ftBSX ftBkm 2 mul 1 add array def /ftBSY ftBkm 1 add array def
+      0 1 ftBSX length 1 sub { ftBSX exch 0 ftBint put } for
+      0 1 ftBSY length 1 sub { ftBSY exch 0 ftBint put } for
+      0 2 ftPts length 2 sub { /fti ED
+        ftPts fti get ftBN /ftBx ED ftPts fti 1 add get ftBN /ftBy ED
+        /ftBp 1 ftBint def
+        0 1 ftBSX length 1 sub { /ftj ED
+          ftBSX ftj 2 copy get ftBp ftBadd put
+          ftj ftBkm le { ftBSY ftj 2 copy get ftBp ftBy ftBmul ftBadd put } if
+          /ftBp ftBp ftBx ftBmul def
+        } for
+      } for
+      /ftBw ftNp 2 mul def
+      /ftBM ftNp ftBw mul array def
+      0 1 ftNp 1 sub { /fti ED
+        0 1 ftNp 1 sub { /ftj ED
+          ftBM fti ftBw mul ftj add ftBSX fti ftj add ftBo 2 mul add get put
+          ftBM fti ftBw mul ftNp add ftj add fti ftj eq { 1 }{ 0 } ifelse ftBint put
+        } for
+      } for
+      /ftBok true def
+      0 1 ftNp 1 sub { /ftBc ED
+        ftBok {
+          /ftBpv ftBc def
+          ftBc 1 add 1 ftNp 1 sub { /fti ED
+            ftBM fti ftBw mul ftBc add get /absbn ftB
+            ftBM ftBpv ftBw mul ftBc add get /absbn ftB
+            /gtbn ftB { /ftBpv fti def } if
+          } for
+          ftBM ftBpv ftBw mul ftBc add get /bniszero ftB { /ftBok false def }{
+            ftBpv ftBc ne {
+              0 1 ftBw 1 sub { /ftj ED
+                /ftBt ftBM ftBpv ftBw mul ftj add get def
+                ftBM ftBpv ftBw mul ftj add ftBM ftBc ftBw mul ftj add get put
+                ftBM ftBc ftBw mul ftj add ftBt put
+              } for
+            } if
+            /ftBd ftBM ftBc ftBw mul ftBc add get def
+            0 1 ftBw 1 sub { /ftj ED
+              ftBM ftBc ftBw mul ftj add 2 copy get ftBd ftBdiv put } for
+            0 1 ftNp 1 sub { /fti ED
+              fti ftBc ne {
+                /ftBf ftBM fti ftBw mul ftBc add get def
+                ftBf /bniszero ftB not {
+                  0 1 ftBw 1 sub { /ftj ED
+                    ftBM fti ftBw mul ftj add 2 copy get
+                    ftBf ftBM ftBc ftBw mul ftj add get ftBmul ftBsub put
+                  } for
+                } if
+              } if
+            } for
+          } ifelse
+        } if
+      } for
+      ftBok {
+        /ftBAinv ftNp ftNp mul array def /ftAinv ftNp ftNp mul array def
+        0 1 ftNp 1 sub { /fti ED
+          0 1 ftNp 1 sub { /ftj ED
+            ftBM fti ftBw mul ftNp add ftj add get
+            dup ftBAinv fti ftNp mul ftj add 3 -1 roll put
+            ftBreal ftAinv fti ftNp mul ftj add 3 -1 roll put
+          } for
+        } for
+        /ftBaiR ftNp array def
+        0 1 ftNp 1 sub { /fti ED
+          0 ftBint
+          0 1 ftNp 1 sub { /ftj ED
+            ftBAinv fti ftNp mul ftj add get ftBSY ftj ftBo add get ftBmul ftBadd } for
+          ftBaiR fti 3 -1 roll put
+        } for
+      } if
+    } def
+    %Replace the solver. For a singular matrix the reals are used as before.
+    /ftCalcInvF /ftCalcInv load def /ftSolveF /ftSolve load def
+    /ftCalcInv { ftCalcInvB ftBok not { /ftBig false def ftCalcInvF } if } def
+    /ftSolve { ftBig {
+        /m order 1 add def /ai ftNp array def
+        0 1 ftNp 1 sub { dup ftBaiR exch get ftBreal ai 3 1 roll put } for
+      }{ ftSolveF } ifelse } def
+  } if
   0 1 A length 1 sub { A exch 0 put } for
   0 1 B length 1 sub { B exch 0 put } for
   0 1 ai length 1 sub { ai exch 0 put } for
@@ -704,6 +859,7 @@ n 0 eq not
     \pst@number\psxunit\space div FXtrans
     n 2 mul 1 roll
   } repeat
+  ftBig { n 2 mul copy n 2 mul array astore /ftPts ED } if
   %START ASSEMBLY OF LEAST SQUARES MATRIX
   1 1 order 1 add { /ci exch def
     1 1 ci { /cj exch def
@@ -801,6 +957,10 @@ n 0 eq not
       } for
     } for
     dup 0 lt { pop 0 } if } def
+  ftBig {%fitted value and leverage with arbitrary precision
+    /ftBai ReduceOrder { [ ftC ftBN ftBaiR aload pop ] }{ ftBaiR } ifelse def
+    /ftPoly { ftPolyB } def /ftLev { ftLevB } def
+  } if
   plotcoord 2 eq {%statistics of the untransformed values
     /ftYs { ftC add RYtrans } def % Yt -> y
     /ftPs { ftPoly RYtrans } def  % Xt -> fitted y

@@ -11,12 +11,16 @@ on:
       - "doc/**"
       - "tex/**"
       - "latex/**"
+      - "dvips/**"
+      - "tools/**"
       - ".github/workflows/build-doc.yml"
   pull_request:
     paths:
       - "doc/**"
       - "tex/**"
       - "latex/**"
+      - "dvips/**"
+      - "tools/**"
       - ".github/workflows/build-doc.yml"
   workflow_dispatch:
 
@@ -36,6 +40,8 @@ jobs:
           # Search this repository's tex/ and latex/ first; the trailing
           # separator keeps the standard TeX Live search path after them.
           TEXINPUTS: "../tex:../latex:"
+          # The same for the PostScript header in dvips/.
+          TEXPSHEADERS: "../dvips:"
           # Stop TeX wrapping log lines, so the checks below can match paths.
           max_print_line: "1000"
         run: |
@@ -44,6 +50,9 @@ jobs:
           # Fail if TeX picked up pst-fit from TeX Live instead of this repository.
           grep -F "(../tex/pst-fit.tex" pst-fit-doc.log
           grep -F "(../latex/pst-fit.sty" pst-fit-doc.log
+
+      - name: Test the bignum option with dvips and Ghostscript
+        run: bash tools/bignum-test.sh
 
       - name: Keep PDF as workflow artifact
         uses: actions/upload-artifact@v4

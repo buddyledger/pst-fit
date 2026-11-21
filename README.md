@@ -20,6 +20,8 @@ Beyond the fit itself, the `GLLSR` plot style can (since version 0.04):
 
 The new plot style `ErrorFunction` draws error bars whose length is calculated from the value (`xerrfunc`, `yerrfunc`).
 
+Since version 0.05 the option `bignum` (for example `bignum=20`) calculates the fit with decimal numbers of that many digits. With `latex` → `dvips` → Ghostscript numbers have only about 7 digits, and without the option the fit can be wrong when the x values are far from zero or the polynomial order is high. LuaLaTeX has enough precision and ignores the option.
+
 A short example:
 
 ```latex
@@ -53,7 +55,30 @@ The PDF is attached to the workflow run as the `pst-fit-doc` artifact. The workf
 To build locally from the `doc` folder on Linux or macOS:
 
 ```bash
-TEXINPUTS="../tex:../latex:" latexmk -lualatex pst-fit-doc.tex
+TEXINPUTS="../tex:../latex:" TEXPSHEADERS="../dvips:" latexmk -lualatex pst-fit-doc.tex
+```
+
+## The bignum library
+
+`dvips/pst-fit-bignum.pro` is generated from `bignumlibrary.ps` in
+[buddyledger/postscript-math](https://github.com/buddyledger/postscript-math). Do not edit it here:
+change the library there.
+
+The [Sync bignum library](../../actions/workflows/sync-bignum.yml) workflow rebuilds the header from the
+latest library, tests it, and opens a pull request if it changed. It runs every Monday and can be started by hand:
+
+```bash
+gh workflow run sync-bignum.yml
+```
+
+To rebuild and test the header locally (needs TeX Live and Ghostscript for the test):
+
+```bash
+bash tools/make-bignum-header.sh ../postscript-math/bignumlibrary.ps
+```
+
+```bash
+bash tools/bignum-test.sh
 ```
 
 ## Licence

@@ -13,4 +13,10 @@ It also prints regression statistics, draws confidence and
 prediction intervals and standardised residuals, and has a
 plot style for error bars with a calculated length.
 
+With the option bignum the fit is calculated with decimal
+numbers of arbitrary precision, which is needed with dvips and
+Ghostscript for x values far from zero or polynomials of a
+higher order. The header file pst-fit-bignum.pro has to be
+installed in dvips/pst-fit/ of a TeX tree.
+
 hvoss@tug.org
