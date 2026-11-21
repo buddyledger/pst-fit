@@ -33,6 +33,13 @@
 
 \let\Section\section
 \def\section{\clearpage\Section}
+% prints the string which the PostScript code leaves on the stack,
+% the code is run with the procedures of the bignum library
+\newcommand\bnshow[1]{%
+  \begin{pspicture}(0,-0.1)(12,0.3)
+  \pscustom{\moveto(0,0)
+    \code{/Courier findfont 9 scalefont setfont tx@bnDict begin #1 end show}}
+  \end{pspicture}}
 \begin{document}
 
 \title{\texttt{pst-fit}}
@@ -416,6 +423,79 @@ this figure with Ghostscript.
 The decimal numbers are provided by the header file \texttt{pst-fit-bignum.pro},
 which is loaded by the package. It is the PostScript library
 \texttt{bignumlibrary.ps} from \url{https://github.com/buddyledger/postscript-math}.
+
+\subsection{The decimal numbers used directly}
+The procedures of the library can also be used in own PostScript code. They
+are in the dictionary \texttt{tx@bnDict}. A decimal number is made with
+\texttt{setbn} from an integer or, for all other values, from a string;
+\texttt{n setbnsize} sets the number of digits; \texttt{addbn}, \texttt{subbn},
+\texttt{mulbn} and \texttt{divbn} calculate, \texttt{eqbn}, \texttt{gtbn} and
+\texttt{ltbn} compare, \texttt{bncvs} converts into a string and
+\texttt{bncvr} into a real. There are also \texttt{pibn}, \texttt{sinbn},
+\texttt{cosbn}, \texttt{tanbn}, \texttt{lnbn} and \texttt{log10bn}. The
+examples use the following macro, which prints the string that the code
+leaves on the stack:
+
+\begin{lstlisting}
+\newcommand\bnshow[1]{%
+  \begin{pspicture}(0,-0.1)(12,0.3)
+  \pscustom{\moveto(0,0)
+    \code{/Courier findfont 9 scalefont setfont tx@bnDict begin #1 end show}}
+  \end{pspicture}}
+\end{lstlisting}
+
+These examples do not depend on the option \Lkeyword{bignum} and they are
+calculated with Lua\LaTeX, too, where they take much longer than with
+Ghostscript (the 50 digits of $\pi$ about 40 seconds instead of less than one).
+
+\subsubsection*{50 digits of $\pi$}
+\begin{LTXexample}[pos=t]
+\bnshow{50 setbnsize pibn bncvs}
+\end{LTXexample}
+
+\subsubsection*{$\sqrt2$ with 40 digits}
+Newton's method, $x\leftarrow(x+2/x)/2$, doubles the number of correct
+digits with every step. Six steps from $x=1$ are enough:
+\begin{LTXexample}[pos=t]
+\bnshow{40 setbnsize 1 setbn
+  6 { dup 2 setbn exch divbn addbn (0.5) setbn mulbn } repeat bncvs}
+\end{LTXexample}
+
+\subsubsection*{$30!$}
+The factorial of 30 has 33 digits; a real keeps the first 7 or 15 of them.
+\begin{LTXexample}[pos=t]
+\bnshow{33 setbnsize 1 setbn 1 1 30 { setbn mulbn } for bncvs}
+\end{LTXexample}
+
+\subsection{Pitfalls of rounding}
+\subsubsection*{Ten times 0.1 is not 1}
+A real is a binary number and $0.1$ has no exact binary representation.
+The error is small, but a test for equality fails. The decimal number
+$0.1$ is exact.
+\begin{LTXexample}[pos=t]
+\bnshow{0 10 { 0.1 add } repeat 1 eq
+  { (reals: equal to 1) }{ (reals: not equal to 1) } ifelse}
+
+\bnshow{20 setbnsize 0 setbn 10 { (0.1) setbn addbn } repeat 1 setbn eqbn
+  { (decimal numbers: equal to 1) }{ (decimal numbers: not equal to 1) } ifelse}
+\end{LTXexample}
+
+\subsubsection*{A small number is lost beside a large one}
+$(10^{16}+1)-10^{16}$ should be 1. With reals the 1 is lost in the sum, even
+with double precision, and the result is 0. This is what happens in the sums
+of a least squares fit. With 20 digits the result is correct.
+\begin{LTXexample}[pos=t]
+\bnshow{1e16 1 add 1e16 sub 20 string cvs}
+
+\bnshow{20 setbnsize (1e16) setbn 1 setbn addbn (1e16) setbn subbn bncvs}
+\end{LTXexample}
+
+\subsubsection*{Decimal numbers are rounded, too}
+More digits make the rounding error smaller, but they do not remove it:
+$1/3$ has no exact decimal representation and $(1/3)\cdot3$ is not 1.
+\begin{LTXexample}[pos=t]
+\bnshow{20 setbnsize 1 setbn 3 setbn divbn 3 setbn mulbn bncvs}
+\end{LTXexample}
 
 \clearpage
 \section{List of all optional arguments for \texttt{pst-fit}}

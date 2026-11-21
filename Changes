@@ -17,6 +17,9 @@ pst-fit.tex ----------- (bl/hv)
                   - new header file pst-fit-bignum.pro, the PostScript
                     library bignumlibrary.ps for decimal numbers of
                     arbitrary precision
+                  - documentation: numerical accuracy, examples for the
+                    direct use of the decimal numbers (digits of pi,
+                    pitfalls of rounding)
 0.04  2026-11-20  - new option plottype: confidence interval of the fit
                     (upperci, lowerci, bothci), prediction interval
                     (upperpi, lowerpi, bothpi) and standardised residuals
