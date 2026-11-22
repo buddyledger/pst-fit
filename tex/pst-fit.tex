@@ -27,9 +27,22 @@
 \def\filedate{2026/11/21}
 \message{`PST-fit' v\fileversion, \filedate\space (BL,HV)}
 %
-\pstheader{pst-fit-bignum.pro}% arbitrary precision arithmetic, for the option bignum
-%
 \edef\PstAtCode{\the\catcode`\@} \catcode`\@=11\relax
+%
+% The decimal numbers of arbitrary precision, for the option bignum, come from
+% the package pst-numeric if it is installed (its header pst-numeric-bignum.pro),
+% otherwise from pst-fit-bignum.pro, pst-fit's own copy of the same library.
+% Both define the procedures in the dictionary tx@NumericDict.
+\newread\pst@fit@read
+\openin\pst@fit@read=pst-numeric.tex\relax
+\ifeof\pst@fit@read
+  \pstheader{pst-fit-bignum.pro}%
+  \message{pst-fit: decimal numbers from pst-fit-bignum.pro}%
+\else
+  \closein\pst@fit@read
+  \pstheader{pst-numeric-bignum.pro}%
+  \message{pst-fit: decimal numbers from pst-numeric-bignum.pro}%
+\fi
 %
 \pst@addfams{pst-fit}
 %
@@ -676,19 +689,19 @@ n 0 eq not
   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   %With the option bignum the sums, the solution of the least squares system,
   %its inverse, the fitted values and the leverage are calculated with the
-  %decimal numbers of pst-fit-bignum.pro. The reals of Ghostscript have only
+  %decimal numbers of pst-numeric (or pst-fit-bignum.pro). The reals of Ghostscript have only
   %about 7 digits, which is not enough for x values far from zero or for
   %polynomials of a higher order.
   %It is only used where the reals have single precision. An interpreter with
   %double precision reals (luapstricks) is accurate enough and much slower
   %with the decimal numbers.
-  /ftBig \psk@bignum\space cvi 0 gt /tx@bnDict where { pop true }{ false } ifelse and
+  /ftBig \psk@bignum\space cvi 0 gt /tx@NumericDict where { pop true }{ false } ifelse and
     16777217 cvr 16777216 cvr eq and def
   ftBig {
     %The library needs its dictionary on the dictionary stack. It is taken
     %from there again after every call, so that nothing of pst-fit is
     %defined in it.
-    /ftB { tx@bnDict exch get tx@bnDict begin exec end } def
+    /ftB { tx@NumericDict exch get tx@NumericDict begin exec end } def
     \psk@bignum\space cvi /setbnsize ftB
     /ftBmul { /mulbn ftB } def /ftBadd { /addbn ftB } def
     /ftBsub { /subbn ftB } def /ftBdiv { /divbn ftB } def

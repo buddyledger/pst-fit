@@ -39,7 +39,6 @@ jobs:
         run: |
           rev=$(git -C upstream log -1 --format=%h --abbrev=7 -- bignumlibrary.ps)
           bash tools/make-bignum-header.sh upstream/bignumlibrary.ps "$rev"
-          rm -rf upstream
           echo "rev=$rev" >> "$GITHUB_OUTPUT"
           if git diff --quiet -- dvips/pst-fit-bignum.pro; then
             echo "The header is up to date with $UPSTREAM@$rev."
@@ -51,7 +50,8 @@ jobs:
 
       - name: Test the new header
         if: steps.build.outputs.changed == 'true'
-        run: docker run --rm -v "$PWD:/pkg:ro" texlive/texlive:latest bash /pkg/tools/bignum-test.sh
+        # pst-fit's own copy, and the package pst-numeric from the same checkout
+        run: docker run --rm -v "$PWD:/pkg:ro" -e PSTNUMERIC=/pkg/upstream texlive/texlive:latest bash /pkg/tools/bignum-test.sh
 
       - name: Push a branch and open a pull request
         if: steps.build.outputs.changed == 'true'
@@ -59,6 +59,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REV: ${{ steps.build.outputs.rev }}
         run: |
+          rm -rf upstream
           branch="sync/bignum-$REV"
           if git ls-remote --exit-code --heads origin "$branch" > /dev/null; then
             echo "Branch $branch exists already, nothing to do."

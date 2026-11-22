@@ -14,9 +14,12 @@ pst-fit.tex ----------- (bl/hv)
                     given number of digits, for polynomials of a high order
                     with Ghostscript. It is ignored with LuaLaTeX, which
                     has double precision numbers.
-                  - new header file pst-fit-bignum.pro, the PostScript
-                    library bignumlibrary.ps for decimal numbers of
-                    arbitrary precision
+                  - the decimal numbers come from the package pst-numeric
+                    (its header pst-numeric-bignum.pro) if it is
+                    installed, otherwise from the new header file
+                    pst-fit-bignum.pro, a copy of the same PostScript
+                    library bignumlibrary.ps; the procedures are in the
+                    dictionary tx@NumericDict
                   - documentation: numerical accuracy, examples for the
                     direct use of the decimal numbers (digits of pi,
                     pitfalls of rounding)
