@@ -38,7 +38,7 @@
 \newcommand\bnshow[1]{%
   \begin{pspicture}(0,-0.1)(11,0.3)
   \pscustom{\moveto(0,0)
-    \code{/Courier findfont 9 scalefont setfont tx@bnDict begin #1 end show}}
+    \code{/Courier findfont 9 scalefont setfont tx@NumericDict begin #1 end show}}
   \end{pspicture}}
 \newcommand\wrong[1]{\textcolor{gray}{#1}}% wrong digits
 \begin{document}
@@ -421,13 +421,18 @@ this figure with Ghostscript.
 \end{psgraph}
 \end{LTXexample}
 
-The decimal numbers are provided by the header file \texttt{pst-fit-bignum.pro},
-which is loaded by the package. It is the PostScript library
-\texttt{bignumlibrary.ps} from \url{https://github.com/buddyledger/postscript-math}.
+The decimal numbers come from the package \texttt{pst-numeric}, which
+\texttt{pst-fit} uses if it is installed: it loads its header
+\texttt{pst-numeric-bignum.pro} (not the package itself). Without
+\texttt{pst-numeric}, \texttt{pst-fit} loads its own copy of the same
+library, \texttt{pst-fit-bignum.pro}, so the option works either way. The
+log file says which one was used. The library is \texttt{bignumlibrary.ps}
+from \url{https://github.com/buddyledger/postscript-math}; \texttt{pst-numeric}
+adds matrices, complex numbers and numerical methods to it.
 
 \subsection{The decimal numbers used directly}
 The procedures of the library can also be used in own PostScript code. They
-are in the dictionary \texttt{tx@bnDict}. A decimal number is made with
+are in the dictionary \texttt{tx@NumericDict}. A decimal number is made with
 \texttt{setbn} from an integer or, for all other values, from a string;
 \texttt{n setbnsize} sets the number of digits; \texttt{addbn}, \texttt{subbn},
 \texttt{mulbn} and \texttt{divbn} calculate, \texttt{eqbn}, \texttt{gtbn} and
@@ -441,7 +446,7 @@ leaves on the stack:
 \newcommand\bnshow[1]{%
   \begin{pspicture}(0,-0.1)(11,0.3)
   \pscustom{\moveto(0,0)
-    \code{/Courier findfont 9 scalefont setfont tx@bnDict begin #1 end show}}
+    \code{/Courier findfont 9 scalefont setfont tx@NumericDict begin #1 end show}}
   \end{pspicture}}
 \end{lstlisting}
 
