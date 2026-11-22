@@ -42,19 +42,31 @@ precision:
 So pst-numeric has to centre and scale x, and give a real t value in
 bignum mode, before pst-fit can use it.
 
+**Fixed in pst-numeric 1.5** (2026-11-22): with centring, degree 2 gives
+c₀ = 68448.65 (exact 68448.63) and degree 4 gives R² = 0.999812 (the
+exact value) on the same reals. In bignum mode the t value now comes from
+reals.
+
 ## Stage 1: pst-numeric 1.5 adds what pst-fit needs
+
+**Status: done except item 8, in pst-numeric 1.5**
+([`433d13c`](https://github.com/buddyledger/pst-numeric/commit/433d13c),
+pushed 2026-11-22, not yet on CTAN). All 1595 tests pass on Ghostscript
+9.52 against the source files and the dvips headers; the 71 new tests are
+in `test/tests_calc15.py`. The table under "Where things stand" describes
+1.4.1.
 
 These changes are made in the pst-numeric repository.
 
-1. **Centre and scale x** in `regress` for polynomials and for the transformed x, and transform the coefficients and the covariance matrix back. *Done when* pst-fit's precision test (PolyOrder 2 and 4) gives 0.05's results with reals on Ghostscript 9.52.
-2. **Custom transforms:** `/xtrans {…}`, `/ytrans {…}` and `/yback {…}`, which are CustomFit's `FXtrans`, `FYtrans` and `RYtrans`.
-3. **`/drop true`:** leave out the points a transform can't take and give their number in `/dropped`, as `CheckZeroX` and `CheckZeroY` do. Without it, `rangecheck` stays the default.
-4. **`/tval t`** to set the t value, as `tvp` does. In bignum mode the t value should also come from the real `tinv` (about 1 ms) instead of the bignum one (3–7 s), because the bands don't need 30 digits.
-5. **More results:** `/xbar`, `/ybar`, `/sxx`, `/syy` and `/sxy`, in the space of the fit (printconfig flags 4–6, 8 and 9). Also new `regShow` words for them and for the half width of the band at the first point, at x̄ and at the last point (printconfig flag 10).
-6. **Evaluation in the space of the fit:** a flag on `regeval`, `regci` and `regpi`, or separate procedures, for `plotcoord=trans`.
-7. **Exact conversion of a real to a bignum,** as pst-fit's `ftBN` does. `setbn` keeps only the 6 digits that `cvs` writes, and `\listplot` passes the data as reals.
-8. **Header size:** `calc` loads `matrix`, `complex`, `special` and `bignum`, about 170 KB of headers. Decide whether regression should still need `complex`.
-9. **Tests:** one for each item above, plus pst-fit's precision and bignum cases copied into pst-numeric's test suite.
+1. ✅ **Centre and scale x** in `regress` for polynomials and for the transformed x, and transform the coefficients and the covariance matrix back. *Done when* pst-fit's precision test (PolyOrder 2 and 4) gives 0.05's results with reals on Ghostscript 9.52.
+2. ✅ **Custom transforms:** `/xtrans {…}`, `/ytrans {…}` and `/yback {…}`, which are CustomFit's `FXtrans`, `FYtrans` and `RYtrans`.
+3. ✅ **`/drop true`:** leave out the points a transform can't take and give their number in `/dropped`, as `CheckZeroX` and `CheckZeroY` do. Without it, `rangecheck` stays the default.
+4. ✅ **`/tval t`** to set the t value, as `tvp` does. In bignum mode the t value should also come from the real `tinv` (about 1 ms) instead of the bignum one (3–7 s), because the bands don't need 30 digits.
+5. ✅ **More results:** `/xbar`, `/ybar`, `/sxx`, `/syy` and `/sxy`, in the space of the fit (printconfig flags 4–6, 8 and 9). Also new `regShow` words for them and for the half width of the band at the first point, at x̄ and at the last point (printconfig flag 10).
+6. ✅ **Evaluation in the space of the fit:** a flag on `regeval`, `regci` and `regpi`, or separate procedures, for `plotcoord=trans`. Done as `regevalt`, `regcit` and `regpit`.
+7. ✅ **Exact conversion of a real to a bignum,** as pst-fit's `ftBN` does. `setbn` keeps only the 6 digits that `cvs` writes, and `\listplot` passes the data as reals. Done as `setbnx`, and as the `/exact true` option of `regress`; `/bignum true` switches to bignums when all the data are reals.
+8. ⬜ **Header size (still open):** `calc` loads `matrix`, `complex`, `special` and `bignum`, about 170 KB of headers. Decide whether regression should still need `complex`.
+9. ✅ **Tests:** one for each item above, plus pst-fit's precision and bignum cases copied into pst-numeric's test suite. pst-fit's precision case is in the suite, with reals and with bignums; the cases of `tools/bignum-test.tex` are not copied yet.
 
 Release 1.5 to CTAN, then wait until it is in TeX Live before pst-fit
 requires it.
@@ -103,10 +115,9 @@ requires it.
 
 ## Release order
 
-1. pst-numeric 1.4.1 to CTAN. This waits for the CTAN secrets.
-2. pst-numeric 1.5 (stage 1) to CTAN.
-3. pst-fit 0.06 (stage 2), once pst-numeric 1.5 is in TeX Live. Until then pst-fit 0.05, with its fallback, stays the CTAN version.
-4. pst-fit 0.07 (stage 3).
+1. pst-numeric 1.5 (stage 1) to CTAN, as its first CTAN release. This waits for the CTAN secrets.
+2. pst-fit 0.06 (stage 2), once pst-numeric 1.5 is in TeX Live. Until then pst-fit 0.05, with its fallback, stays the CTAN version.
+3. pst-fit 0.07 (stage 3).
 
 ## Open questions
 
