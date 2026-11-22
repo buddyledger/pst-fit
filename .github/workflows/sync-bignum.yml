@@ -1,12 +1,12 @@
 name: Sync bignum library
 
 # Rebuilds dvips/pst-fit-bignum.pro from bignumlibrary.ps of the repository
-# buddyledger/postscript-math. If the library changed, the new header is
+# buddyledger/pst-numeric (source/bignumlibrary.ps). If the library changed, the new header is
 # tested and offered as a pull request; nothing is changed on main directly.
 #
 # It runs once a week, by hand (Actions tab, or `gh workflow run sync-bignum.yml`),
 # and on a repository_dispatch event of type "bignum-updated", which
-# postscript-math can send to start it right after a push.
+# pst-numeric can send to start it right after a push.
 
 on:
   schedule:
@@ -20,7 +20,7 @@ permissions:
   pull-requests: write
 
 env:
-  UPSTREAM: buddyledger/postscript-math
+  UPSTREAM: buddyledger/pst-numeric
 
 jobs:
   sync:
@@ -37,8 +37,8 @@ jobs:
       - name: Rebuild the header
         id: build
         run: |
-          rev=$(git -C upstream log -1 --format=%h --abbrev=7 -- bignumlibrary.ps)
-          bash tools/make-bignum-header.sh upstream/bignumlibrary.ps "$rev"
+          rev=$(git -C upstream log -1 --format=%h --abbrev=7 -- source/bignumlibrary.ps)
+          bash tools/make-bignum-header.sh upstream/source/bignumlibrary.ps "$rev"
           echo "rev=$rev" >> "$GITHUB_OUTPUT"
           if git diff --quiet -- dvips/pst-fit-bignum.pro; then
             echo "The header is up to date with $UPSTREAM@$rev."
@@ -73,7 +73,7 @@ jobs:
           git push origin "$branch"
           body="Rebuilt \`dvips/pst-fit-bignum.pro\` from https://github.com/$UPSTREAM/commit/$REV with \`tools/make-bignum-header.sh\`. The header check and the bignum fit test passed in the sync run. Before a release: bump the version, add a line to \`Changes\`."
           if gh pr create --base main --head "$branch" \
-               --title "Update bignum header to postscript-math@$REV" --body "$body"; then
+               --title "Update bignum header to pst-numeric@$REV" --body "$body"; then
             echo "Pull request opened."
           else
             echo "::warning::Branch $branch was pushed, but the pull request could not be opened. Open it by hand: https://github.com/$GITHUB_REPOSITORY/compare/$branch?expand=1"

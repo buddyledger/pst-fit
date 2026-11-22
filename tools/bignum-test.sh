@@ -6,8 +6,8 @@
 # pst-fit takes the decimal numbers from the package pst-numeric if it is
 # installed, otherwise from its own dvips/pst-fit-bignum.pro. Without
 # arguments this tests pst-fit's own copy. To test with pst-numeric too, set
-# PSTNUMERIC to a checkout of https://github.com/buddyledger/postscript-math:
-#   PSTNUMERIC=../postscript-math tools/bignum-test.sh
+# PSTNUMERIC to a checkout of https://github.com/buddyledger/pst-numeric:
+#   PSTNUMERIC=../pst-numeric tools/bignum-test.sh
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 work="$(mktemp -d)"
