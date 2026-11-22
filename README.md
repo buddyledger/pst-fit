@@ -92,6 +92,10 @@ PSTNUMERIC=../pst-numeric bash tools/bignum-test.sh   # also with pst-numeric
 
 The test checks which header was used, so it fails if the fallback stops working.
 
+## Changes
+
+The changes of every version are in the file [Changes](Changes). Each version is also tagged and has its notes on the [releases page](https://github.com/buddyledger/pst-fit/releases).
+
 ## Licence
 
 LaTeX Project Public License (LPPL). The text of version 1.3c, the current version, is in [LICENSE](LICENSE).
