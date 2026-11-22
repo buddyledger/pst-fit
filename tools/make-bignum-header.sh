@@ -6,7 +6,7 @@
 #
 # The library is copied unchanged, except that the DSC comment lines (%! and %%)
 # are dropped, because they must not appear inside a dvips header. The library
-# defines its names in its own dictionary, tx@PostScriptMathDict, so that they
+# defines its names in its own dictionary, tx@NumericDict, so that they
 # cannot clash with PSTricks; tx@bnDict, the name pst-fit uses, is made another
 # name for that dictionary. Do not edit the header by hand: change the library
 # and run this again.
@@ -25,6 +25,6 @@ mkdir -p "$(dirname "$out")"
   printf '%%\n'
   printf '%%\n'
   tr -d '\r' < "$src" | grep -v -e '^%%' -e '^%!'
-  printf '/tx@bnDict tx@PostScriptMathDict def\n'
+  printf '/tx@bnDict tx@NumericDict def\n'
 } > "$out"
 echo "wrote $out ($(wc -c < "$out") bytes, source commit $rev)"
