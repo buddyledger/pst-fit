@@ -63,13 +63,13 @@ TEXINPUTS="../tex:../latex:" TEXPSHEADERS="../dvips:" latexmk -lualatex pst-fit-
 ## The bignum library
 
 The option `bignum` takes its decimal numbers from the package
-[pst-numeric](https://github.com/buddyledger/postscript-math) if it is installed (`pst-fit.tex` loads its
+[pst-numeric](https://github.com/buddyledger/pst-numeric) if it is installed (`pst-fit.tex` loads its
 header `pst-numeric-bignum.pro`). Otherwise it uses `dvips/pst-fit-bignum.pro`, a copy of the same library
 kept here as a fallback, so pst-fit works with or without pst-numeric. The LaTeX log says which one was
 used (`pst-fit: decimal numbers from ...`). Both define the procedures in the dictionary `tx@NumericDict`.
 
-`dvips/pst-fit-bignum.pro` is generated from `bignumlibrary.ps` in
-[buddyledger/postscript-math](https://github.com/buddyledger/postscript-math). Do not edit it here:
+`dvips/pst-fit-bignum.pro` is generated from `source/bignumlibrary.ps` in
+[buddyledger/pst-numeric](https://github.com/buddyledger/pst-numeric). Do not edit it here:
 change the library there.
 
 The [Sync bignum library](../../actions/workflows/sync-bignum.yml) workflow rebuilds the header from the
@@ -82,12 +82,12 @@ gh workflow run sync-bignum.yml
 To rebuild and test the header locally (needs TeX Live and Ghostscript for the test):
 
 ```bash
-bash tools/make-bignum-header.sh ../postscript-math/bignumlibrary.ps
+bash tools/make-bignum-header.sh ../pst-numeric/source/bignumlibrary.ps
 ```
 
 ```bash
 bash tools/bignum-test.sh
-PSTNUMERIC=../postscript-math bash tools/bignum-test.sh   # also with pst-numeric
+PSTNUMERIC=../pst-numeric bash tools/bignum-test.sh   # also with pst-numeric
 ```
 
 The test checks which header was used, so it fails if the fallback stops working.
