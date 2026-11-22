@@ -5,9 +5,11 @@
 # usage: tools/make-bignum-header.sh <path to bignumlibrary.ps> [<upstream commit>]
 #
 # The library is copied unchanged, except that the DSC comment lines (%! and %%)
-# are dropped, because they must not appear inside a dvips header. It is put
-# into its own dictionary, tx@bnDict, so that its names cannot clash with
-# PSTricks. Do not edit the header by hand: change the library and run this again.
+# are dropped, because they must not appear inside a dvips header. The library
+# defines its names in its own dictionary, tx@PostScriptMathDict, so that they
+# cannot clash with PSTricks; tx@bnDict, the name pst-fit uses, is made another
+# name for that dictionary. Do not edit the header by hand: change the library
+# and run this again.
 set -euo pipefail
 src="$1"
 rev="${2:-unknown}"
@@ -22,9 +24,7 @@ mkdir -p "$(dirname "$out")"
   printf '%% Source commit: %s\n' "$rev"
   printf '%%\n'
   printf '%%\n'
-  printf '/tx@bnDict 200 dict def\n'
-  printf 'tx@bnDict begin\n'
   tr -d '\r' < "$src" | grep -v -e '^%%' -e '^%!'
-  printf 'end\n'
+  printf '/tx@bnDict tx@PostScriptMathDict def\n'
 } > "$out"
 echo "wrote $out ($(wc -c < "$out") bytes, source commit $rev)"
