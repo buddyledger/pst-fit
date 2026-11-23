@@ -34,8 +34,9 @@ A short example:
 \end{psgraph}
 ```
 
-The package is published on CTAN at
-[graphics/pstricks/contrib/pst-fit](https://ctan.org/tex-archive/graphics/pstricks/contrib/pst-fit).
+The released versions of pst-fit, the ones meant for production use, are on CTAN at
+[graphics/pstricks/contrib/pst-fit](https://ctan.org/tex-archive/graphics/pstricks/contrib/pst-fit)
+and from there in TeX Live and MiKTeX. This repository holds the development version, which can be ahead of CTAN.
 Documentation is in [doc/pst-fit-doc.pdf](doc/pst-fit-doc.pdf).
 
 This file is for the GitHub repository only. The plain `README` is the one shipped to CTAN.

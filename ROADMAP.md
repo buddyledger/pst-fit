@@ -115,8 +115,8 @@ requires it.
 
 ## Release order
 
-1. pst-numeric 1.5 (stage 1) to CTAN, as its first CTAN release. This waits for the CTAN secrets.
-2. pst-fit 0.06 (stage 2), once pst-numeric 1.5 is in TeX Live. Until then pst-fit 0.05, with its fallback, stays the CTAN version. Herbert Voss uploads pst-fit to CTAN from his fork (see RELEASING.md).
+1. pst-numeric 1.5 (stage 1) to CTAN, as its first CTAN release.
+2. pst-fit 0.06 (stage 2), once pst-numeric 1.5 is in TeX Live. Until then pst-fit 0.05, with its fallback, stays the CTAN version.
 3. pst-fit 0.07 (stage 3).
 
 ## Open questions
